@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Factory — Generic Gali</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&family=Secular+One&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1E1E; --soft:#5A6068; --paper:#E9EDF0; --panel:#FFFFFF;
+  --grid:rgba(30,30,30,.055); --line:#C3CDD6;
+  --front:#1971C2; --back:#F08C00; --store:#6741D9; --ok:#2F9E44; --tbd:#E03131;
+  --console:#16191C;
+  --sketch:255px 15px 225px 15px/15px 225px 15px 255px;
+  --sketch2:15px 225px 15px 255px/225px 15px 255px 15px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Heebo',system-ui,'Segoe UI','Arial Hebrew',sans-serif;
+  color:var(--ink); background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px; line-height:1.65; font-size:16px;
+}
+.wrap{max-width:1160px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:'Secular One','Heebo',sans-serif;font-weight:400;line-height:1.2;margin:0}
+p{margin:.5em 0}
+a{color:var(--front)}
+.mono{font-family:'IBM Plex Mono','Heebo',ui-monospace,monospace}
+
+/* ---------- sketch surfaces ---------- */
+.sketch{background:var(--panel);border:2px solid var(--ink);border-radius:var(--sketch);box-shadow:3px 4px 0 rgba(30,30,30,.07)}
+.sketch.alt{border-radius:var(--sketch2)}
+
+/* ---------- header ---------- */
+header.top{padding:26px 28px;margin-bottom:34px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--soft)}
+h1{font-size:clamp(30px,5vw,46px);margin:6px 0 4px}
+.tagline{max-width:52ch;color:var(--soft);font-size:15px}
+.langbar{display:flex;gap:0;border:2px solid var(--ink);border-radius:40px;overflow:hidden;flex:0 0 auto}
+.langbar button{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;padding:9px 16px;border:0;background:transparent;cursor:pointer;color:var(--ink)}
+.langbar button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* ---------- sections ---------- */
+section{margin:0 0 54px}
+.sechead{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+.sechead h2{font-size:clamp(21px,3vw,27px)}
+.sechead .eyebrow{border-block-end:2px solid var(--ink);padding-bottom:2px}
+.lede{color:var(--soft);max-width:70ch;margin:0 0 20px;font-size:15px}
+
+/* ---------- map ---------- */
+.map{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:14px;align-items:center}
+.maplane{display:flex;flex-direction:column;gap:12px}
+.mapbox{padding:12px 16px}
+.mapbox h3{font-size:16px}
+.mapbox small{display:block;color:var(--soft);font-size:13px;line-height:1.45}
+.conn{display:flex;align-items:center;justify-content:center;color:var(--soft);min-width:34px}
+.conn span{font-size:20px;display:block}
+[dir="rtl"] .conn span{transform:scaleX(-1)}
+.lanetag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:2px 8px;border-radius:20px;color:#fff;align-self:flex-start}
+.t-front{background:var(--front)}.t-back{background:var(--back)}.t-store{background:var(--store)}.t-tbd{background:var(--tbd)}
+@media(max-width:820px){.map{grid-template-columns:1fr}.conn{transform:rotate(90deg)}[dir="rtl"] .conn span{transform:none}}
+
+/* ---------- services ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+details.card{padding:14px 18px}
+details.card summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary h3{font-size:16.5px;flex:1}
+.plus{font-family:'IBM Plex Mono',monospace;color:var(--soft);font-size:18px}
+details[open] .plus{transform:rotate(45deg)}
+.card .one{color:var(--soft);font-size:13.5px;margin:6px 0 0}
+.card ul{margin:12px 0 2px;padding-inline-start:18px;font-size:14px}
+.card li{margin:5px 0}
+.card li b{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12.5px}
+
+/* ---------- live flow ---------- */
+.flowgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media(max-width:980px){.flowgrid{grid-template-columns:1fr}}
+.railbox{padding:18px 20px 22px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;padding:8px 14px;border:2px solid var(--ink);background:var(--panel);border-radius:22px;cursor:pointer}
+.btn:hover{background:var(--ink);color:#fff}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:var(--front);border-color:var(--front)}
+.rail{position:relative}
+.lanehead{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
+.lanehead .lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--soft)}
+.lanehead hr{flex:1;border:0;border-top:1px dashed var(--line);margin:0}
+.lane{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.lane.back{grid-template-columns:repeat(4,1fr)}
+@media(max-width:640px){.lane,.lane.back{grid-template-columns:repeat(2,1fr)}}
+.station{position:relative;border:2px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 7px 9px;cursor:pointer;text-align:start;font:inherit;color:var(--ink);transition:transform .2s,border-color .2s,background .2s}
+.station .num{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--soft);display:block}
+.station .nm{font-size:12.5px;line-height:1.3;display:block;margin-top:2px}
+.station:hover{border-color:var(--ink)}
+.station.done{border-color:var(--ok);background:#F1FBF3}
+.station.done .num{color:var(--ok)}
+.station.active{border-color:var(--ink);border-width:3px;transform:translateY(-2px);box-shadow:3px 4px 0 rgba(30,30,30,.12)}
+.station.active[data-lane="front"]{background:#EAF4FD}
+.station.active[data-lane="back"]{background:#FFF6E8}
+.chip{position:absolute;top:0;inset-inline-start:0;z-index:5;pointer-events:none;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:4px 9px;border-radius:20px;
+  background:var(--ink);color:#fff;white-space:nowrap;transition:transform .55s cubic-bezier(.5,.05,.2,1);box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.chip.idle{opacity:0}
+.now{border-top:2px dashed var(--line);padding-top:14px;margin-top:2px}
+.now .step-n{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--soft)}
+.now h3{font-size:18px;margin:4px 0 6px}
+.now p{margin:0;font-size:14.5px;color:#33383D}
+.flag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;background:var(--tbd);color:#fff;padding:1px 7px;border-radius:20px;margin-inline-start:8px;vertical-align:middle}
+
+/* right column */
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.artifact{padding:0;overflow:hidden}
+.artifact .tab{display:flex;align-items:center;gap:8px;border-block-end:2px solid var(--ink);padding:9px 16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--front);flex:0 0 auto}
+.artifact pre{margin:0;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre;direction:ltr;text-align:left;min-height:190px}
+.console{background:var(--console);border-radius:var(--sketch2);border:2px solid var(--ink);padding:14px 16px;height:210px;overflow-y:auto;
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.85;direction:ltr;text-align:left;color:#C8CDD3}
+.console .l{display:block;white-space:pre-wrap}
+.console .l.front{color:#4DABF7}.console .l.back{color:#FFA94D}.console .l.store{color:#B197FC}.console .l.ok{color:#69DB7C}.console .l.tbd{color:#FF8787}
+.console .l .t{color:#6B7480}
+
+/* ---------- system prompt ---------- */
+.formula{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;direction:ltr;justify-content:flex-start}
+.formula .op{color:var(--soft)}
+.tok{font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:6px 12px;border:2px solid var(--ink);background:var(--panel);border-radius:10px;cursor:pointer}
+.tok[aria-pressed="true"]{background:var(--store);border-color:var(--store);color:#fff}
+.spbody{margin-top:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+@media(max-width:820px){.spbody{grid-template-columns:1fr}}
+.spbody .txt h3{font-size:17px;margin-bottom:6px}
+.spbody .txt p{font-size:14.5px;color:#33383D}
+
+/* ---------- open items ---------- */
+.open{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.open .item{padding:12px 16px}
+.open .item h3{font-size:15px;margin-bottom:4px}
+.open .item p{font-size:13.5px;color:var(--soft);margin:0}
+
+footer{border-top:1px dashed var(--line);padding-top:16px;color:var(--soft);font-size:13px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+:focus-visible{outline:3px solid var(--front);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top sketch">
+  <div>
+    <span class="eyebrow" data-en="Architecture · Generic Gali">ארכיטקטורה · גלי הגנרית</span>
+    <h1>App Factory</h1>
+    <p class="tagline" data-en="One platform that provisions a full chatbot app — bucket, knowledge base, chat history and address — from a form the creator fills in. Click anything on this page.">פלטפורמה אחת שמקימה אפליקציית צ׳אט שלמה — דלי, מאגר ידע, היסטוריית שיחה וכתובת — מתוך טופס שהיוצר ממלא. אפשר ללחוץ על כל דבר בדף הזה.</p>
+  </div>
+  <div class="langbar" role="group" aria-label="Language">
+    <button id="btn-he" aria-pressed="true">עברית</button>
+    <button id="btn-en" aria-pressed="false">ENGLISH</button>
+  </div>
+</header>
+
+<!-- ============ MAP ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow" data-en="Map">מפה</span><h2 data-en="What the system is made of">ממה המערכת מורכבת</h2></div>
+  <p class="lede" data-en="Three surfaces people work in, one provisioning service that does the actual creating, and the AWS resources it leaves behind — one set per application.">שלושה משטחים שאנשים עובדים בהם, שירות הקמה אחד שעושה את היצירה בפועל, והמשאבים ב-AWS שנשארים אחריו — סט אחד לכל אפליקציה.</p>
+
+  <div class="map">
+    <div class="maplane">
+      <div class="mapbox sketch">
+        <span class="lanetag t-front">UI</span>
+        <h3 data-en="Admin Dashboard">דשבורד אדמין</h3>
+        <small data-en="Create an app, edit the data center, delete an app.">יצירת אפליקציה, עריכת מרכז הדאטה, מחיקת אפליקציה.</small>
+      </div>
+      <div class="mapbox sketch alt">
+        <span class="lanetag t-front">UI</span>
+        <h3 data-en="Dev Dashboard">דשבורד פיתוח</h3>
+        <small data-en="Monitoring and deploy.">מוניטורינג ודיפלוי.</small>
+      </div>
+      <div class="mapbox sketch">
+        <span class="lanetag t-front">UI</span>
+        <h3 data-en="Data Center">מרכז הדאטה</h3>
+        <small data-en="Renders the markdown files, edits them, re-embeds file by file.">מציג את קבצי ה-markdown, עורך אותם, ומריץ re-embedding לכל קובץ בנפרד.</small>
+      </div>
+    </div>
+
+    <div class="conn"><span>▸▸</span></div>
+
+    <div class="maplane">
+      <div class="mapbox sketch alt">
+        <span class="lanetag t-back">API</span>
+        <h3 data-en="Provisioning service">שירות ההקמה</h3>
+        <small data-en="Receives the app configuration as JSON and runs the seven creation steps in order.">מקבל את קונפיגורציית האפליקציה כ-JSON ומריץ את שבעת שלבי היצירה לפי הסדר.</small>
+      </div>
+    </div>
+
+    <div class="conn"><span>▸▸</span></div>
+
+    <div class="maplane">
+      <div class="mapbox sketch">
+        <span class="lanetag t-store">AWS</span>
+        <h3 data-en="Per-app resources">משאבים לכל אפליקציה</h3>
+        <small data-en="S3 bucket · Knowledge Base + Data Source · DynamoDB chat history · subdomain.">דלי S3 · Knowledge Base ו-Data Source · טבלת DynamoDB להיסטוריית שיחה · תת-דומיין.</small>
+      </div>
+      <div class="mapbox sketch alt">
+        <span class="lanetag t-store">AWS</span>
+        <h3 data-en="Factory registry">רג׳יסטרי המפעל</h3>
+        <small data-en="One DynamoDB row per app: ui id, app name, Dynamo id, KB id.">שורת DynamoDB אחת לכל אפליקציה: ui id, שם, מזהה Dynamo ומזהה KB.</small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow" data-en="Services">שירותים</span><h2 data-en="Every part, and what it is responsible for">כל חלק, ומה באחריותו</h2></div>
+  <p class="lede" data-en="Open a card to see what it holds and where it hands off.">פתחי כרטיס כדי לראות מה הוא מחזיק ולאן הוא מוסר.</p>
+
+  <div class="cards">
+
+    <details class="card sketch"><summary><span class="lanetag t-front">UI</span><h3 data-en="Admin Dashboard">דשבורד אדמין</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="The only place an application is born or removed.">המקום היחיד שבו אפליקציה נולדת או נמחקת.</p>
+      <ul>
+        <li data-en="Create app — opens the form that becomes the configuration JSON.">יצירת אפליקציה — פותח את הטופס שהופך לקונפיגורציית ה-JSON.</li>
+        <li data-en="Edit the data center of an existing app.">עריכת מרכז הדאטה של אפליקציה קיימת.</li>
+        <li data-en="Delete an app — needs to tear down bucket, KB, table and registry row together.">מחיקת אפליקציה — צריכה למחוק ביחד דלי, KB, טבלה ושורת רג׳יסטרי.</li>
+      </ul></details>
+
+    <details class="card sketch alt"><summary><span class="lanetag t-front">UI</span><h3 data-en="Dev Dashboard">דשבורד פיתוח</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="The operational view, separate from content work.">התצוגה התפעולית, נפרדת מעבודת התוכן.</p>
+      <ul>
+        <li data-en="Monitoring — per app: traffic, errors, ingestion status.">מוניטורינג — לכל אפליקציה: תנועה, שגיאות, סטטוס ingestion.</li>
+        <li data-en="Deploy — pushing a version out to one app or to all of them.">דיפלוי — הוצאת גרסה לאפליקציה אחת או לכולן.</li>
+      </ul></details>
+
+    <details class="card sketch"><summary><span class="lanetag t-front">UI</span><h3 data-en="Data Center">מרכז הדאטה</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="Where the knowledge actually lives, in human-readable form.">כאן הידע באמת חי, בצורה שאדם יכול לקרוא.</p>
+      <ul>
+        <li data-en="Renders the markdown files stored in the app bucket.">מציג את קבצי ה-markdown שיושבים בדלי של האפליקציה.</li>
+        <li data-en="Edit a file, then re-embed that file only.">עריכת קובץ, ואז re-embedding לקובץ הזה בלבד.</li>
+        <li data-en="Create a new file through a set of structural rules, not free text.">יצירת קובץ חדש דרך מערכת חוקי מבנה, לא טקסט חופשי.</li>
+      </ul></details>
+
+    <details class="card sketch alt"><summary><span class="lanetag t-back">API</span><h3 data-en="Provisioning service">שירות ההקמה</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="The backend the frontend hands the JSON to.">הבקאנד שאליו הפרונט מוסר את ה-JSON.</p>
+      <ul>
+        <li data-en="Input: one configuration JSON. Output: the resource ids of the new app.">קלט: JSON קונפיגורציה אחד. פלט: מזהי המשאבים של האפליקציה החדשה.</li>
+        <li data-en="Runs seven steps in a fixed order; a failure halfway leaves orphans, so each step needs to be reversible.">מריץ שבעה שלבים בסדר קבוע; כשלון באמצע משאיר יתומים, ולכן כל שלב צריך להיות הפיך.</li>
+        <li data-en="Owns naming: the app name is the key that ties bucket, table and registry row together.">אחראי על השמות: שם האפליקציה הוא המפתח שקושר בין הדלי, הטבלה ושורת הרג׳יסטרי.</li>
+      </ul></details>
+
+    <details class="card sketch"><summary><span class="lanetag t-store">S3</span><h3 data-en="App bucket">דלי האפליקציה</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="One bucket per app — full data separation between projects.">דלי אחד לכל אפליקציה — הפרדת דאטה מלאה בין פרויקטים.</p>
+      <ul>
+        <li data-en="Named after the app, created first because everything else points at it.">נקרא על שם האפליקציה, נוצר ראשון כי כל השאר מצביע אליו.</li>
+        <li data-en="Holds the markdown files — the source of truth for the knowledge base.">מחזיק את קבצי ה-markdown — מקור האמת של מאגר הידע.</li>
+        <li data-en="A content fix is made in the file here and re-ingested, never patched in a prompt.">תיקון תוכן נעשה בקובץ כאן ומוזרם מחדש, אף פעם לא כטלאי בפרומפט.</li>
+      </ul></details>
+
+    <details class="card sketch alt"><summary><span class="lanetag t-store">BEDROCK</span><h3 data-en="Knowledge Base + Data Source">Knowledge Base ו-Data Source</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="Created with fixed parameters, so every app retrieves the same way.">נוצרים עם פרמטרים קבועים, כך שכל האפליקציות מאחזרות באותה צורה.</p>
+      <ul>
+        <li data-en="Hierarchical chunking, ~500-token parent / ~150-token child."><b>chunking</b> — היררכי, הורה ~500 טוקנים / ילד ~150.</li>
+        <li data-en="Cohere Embed Multilingual v3, 1024 dimensions."><b>embeddings</b> — Cohere Embed Multilingual v3, 1024 ממדים.</li>
+        <li data-en="The data source points at the bucket; an ingestion job turns files into vectors.">ה-Data Source מצביע על הדלי; ingestion job הופך קבצים לוקטורים.</li>
+      </ul></details>
+
+    <details class="card sketch"><summary><span class="lanetag t-store">DYNAMO</span><h3 data-en="Chat history table">טבלת היסטוריית שיחה</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="A table of its own for every app.">טבלה משלה לכל אפליקציה.</p>
+      <ul>
+        <li data-en="Keyed by session id, generated client-side; no user accounts.">מפתח לפי session id שנוצר בצד הלקוח; בלי חשבונות משתמש.</li>
+        <li data-en="History expires on a TTL, so conversations do not accumulate.">ההיסטוריה פגה לפי TTL, כך ששיחות לא נערמות.</li>
+      </ul></details>
+
+    <details class="card sketch alt"><summary><span class="lanetag t-store">DYNAMO</span><h3 data-en="Factory registry">רג׳יסטרי המפעל</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="The one table that knows which apps exist.">הטבלה היחידה שיודעת אילו אפליקציות קיימות.</p>
+      <ul>
+        <li data-en="One row per app: ui id, app name, Dynamo id, KB id.">שורה לכל אפליקציה: ui id, שם אפליקציה, מזהה Dynamo, מזהה KB.</li>
+        <li data-en="Both dashboards read from here — without the row, an app is invisible even if its resources exist.">שני הדשבורדים קוראים מכאן — בלי השורה, אפליקציה בלתי נראית גם אם המשאבים שלה קיימים.</li>
+      </ul></details>
+
+    <details class="card sketch"><summary><span class="lanetag t-tbd">TBD</span><h3 data-en="Subdomain">תת-דומיין</h3><span class="plus">+</span></summary>
+      <p class="one" data-en="The address the app answers on. Still open.">הכתובת שבה האפליקציה עונה. עדיין פתוח.</p>
+      <ul>
+        <li data-en="Probably a CNAME per app — the record type and who issues the certificate are not decided.">כנראה CNAME לכל אפליקציה — סוג הרשומה ומי מנפיק את התעודה לא נסגרו.</li>
+        <li data-en="Last step of creation, so an app can exist and work before it has an address.">השלב האחרון ביצירה, כך שאפליקציה יכולה להתקיים ולעבוד עוד לפני שיש לה כתובת.</li>
+      </ul></details>
+
+  </div>
+</section>
+
+<!-- ============ LIVE FLOW ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow" data-en="Live">בלייב</span><h2 data-en="What happens when CREATE is triggered">מה קורה כשלוחצים CREATE</h2></div>
+  <p class="lede" data-en="Eleven steps: four in the frontend, one handoff, six in the backend. Press play, step through, or click any station to jump to it.">אחד-עשר שלבים: ארבעה בפרונט, מסירה אחת, ושישה בבקאנד. אפשר להריץ, לצעוד שלב-שלב, או ללחוץ על תחנה כדי לקפוץ אליה.</p>
+
+  <div class="flowgrid">
+    <div class="railbox sketch">
+      <div class="controls">
+        <button class="btn primary" id="play" data-en="▶ Run">▶ הרצה</button>
+        <button class="btn" id="next" data-en="Step ⏭">שלב ⏭</button>
+        <button class="btn" id="reset" data-en="↺ Reset">↺ איפוס</button>
+      </div>
+
+      <div class="rail" id="rail">
+        <div class="chip idle mono" id="chip">config</div>
+        <div class="lanehead"><span class="lbl" data-en="Frontend">פרונטאנד</span><hr></div>
+        <div class="lane" id="lane-front"></div>
+        <div class="lanehead"><span class="lbl" data-en="Backend">בקאנד</span><hr></div>
+        <div class="lane back" id="lane-back"></div>
+      </div>
+
+      <div class="now">
+        <span class="step-n mono" id="step-n">STEP 00</span>
+        <h3 id="step-t"></h3>
+        <p id="step-d"></p>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="artifact sketch alt">
+        <div class="tab"><span class="dot" id="art-dot"></span><span id="art-file">app.config.json</span></div>
+        <pre id="art-code"></pre>
+      </div>
+      <div class="console" id="console" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SYSTEM PROMPT ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow" data-en="Prompt">פרומפט</span><h2 data-en="The system prompt is assembled, not written">ה-System Prompt מורכב, לא נכתב</h2></div>
+  <p class="lede" data-en="Five named sections concatenate into one string. The creator fills sections; nobody edits the final prompt by hand. Click a section.">חמישה חלקים בעלי שם משורשרים למחרוזת אחת. היוצר ממלא חלקים; אף אחד לא עורך את הפרומפט הסופי ביד. אפשר ללחוץ על חלק.</p>
+
+  <div class="sketch" style="padding:18px 20px">
+    <div class="formula">
+      <span class="op">SYSTEM_PROMPT&nbsp;=</span>
+      <button class="tok" data-sp="0" aria-pressed="true">_IDENTITY</button><span class="op">+</span>
+      <button class="tok" data-sp="1" aria-pressed="false">_LANGUAGE</button><span class="op">+</span>
+      <button class="tok" data-sp="2" aria-pressed="false">_VOICE</button><span class="op">+</span>
+      <button class="tok" data-sp="3" aria-pressed="false">_RULES</button><span class="op">+</span>
+      <button class="tok" data-sp="4" aria-pressed="false">_FORMAT_AND_FLAGS</button>
+    </div>
+    <div class="spbody">
+      <div class="txt"><h3 id="sp-t"></h3><p id="sp-d"></p></div>
+      <div class="artifact sketch alt" style="box-shadow:none">
+        <div class="tab"><span class="dot" style="background:var(--store)"></span><span id="sp-file"></span></div>
+        <pre id="sp-code" style="min-height:150px"></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OPEN ============ -->
+<section>
+  <div class="sechead"><span class="eyebrow" data-en="Open">פתוח</span><h2 data-en="Not decided yet">מה עוד לא סגור</h2></div>
+  <div class="open">
+    <div class="item sketch"><span class="lanetag t-tbd">TBD</span><h3 data-en="Subdomain record">רשומת תת-דומיין</h3><p data-en="CNAME or something else, and where certificates come from.">CNAME או משהו אחר, ומאיפה מגיעות התעודות.</p></div>
+    <div class="item sketch alt"><span class="lanetag t-tbd">TBD</span><h3 data-en="Disclaimers">דיסקליימרים</h3><p data-en="A creation requirement in the data center — format and where they are stored.">דרישת יצירה במרכז הדאטה — הפורמט ואיפה הם נשמרים.</p></div>
+    <div class="item sketch"><span class="lanetag t-tbd">TBD</span><h3 data-en="The data file">קובץ הדאטה</h3><p data-en="Which structure the creator must supply before an app can be created.">איזה מבנה היוצר חייב לספק לפני שאפשר ליצור אפליקציה.</p></div>
+    <div class="item sketch alt"><span class="lanetag t-tbd">TBD</span><h3 data-en="Rollback on failure">חזרה לאחור בכשלון</h3><p data-en="Step 4 fails after the bucket exists — what cleans up.">שלב 4 נכשל אחרי שהדלי כבר קיים — מי מנקה.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span class="mono" data-en="App Factory — architecture walkthrough">App Factory — סקירת ארכיטקטורה</span>
+  <span class="mono">generic gali · app #1 = gali</span>
+</footer>
+
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const FLOW = [
+ {n:'F1',lane:'front',
+  s:{he:'שם ותבנית',en:'Name & template'},
+  t:{he:'שם האפליקציה ותבנית ממשק',en:'App name and UI template'},
+  d:{he:'היוצר בוחר שם ותבנית ממשק מוכנה. השם הזה יהפוך למפתח של כל שאר המשאבים, ולכן הוא נקבע פעם אחת.',en:'The creator picks a name and a ready UI template. That name becomes the key for every other resource, so it is chosen once.'},
+  log:{he:'front · ui_template=clinic-rtl',en:'front · ui_template=clinic-rtl'},
+  chip:{he:'טיוטה',en:'draft'}, file:'app.config.json',
+  code:`{
+  "app_name": "gali-ivf",
+  "ui_template": "clinic-rtl",
+  "language": "he"
+}`},
+ {n:'F2',lane:'front',
+  s:{he:'חוקים ו-SP',en:'Rules & SP'},
+  t:{he:'החוקים וחלקי ה-System Prompt',en:'Rules and system prompt sections'},
+  d:{he:'המשתמש כותב את החוקים ואת חמשת חלקי הפרומפט. אלה קבצים גנריים — אותו מבנה בדיוק לכל אפליקציה, רק התוכן משתנה.',en:'The user writes the rules and the five prompt sections. These are generic files — the same structure for every application, only the content changes.'},
+  log:{he:'front · 5 sp_sections · 14 rules',en:'front · 5 sp_sections · 14 rules'},
+  chip:{he:'טיוטה',en:'draft'}, file:'sp.sections.json',
+  code:`{
+  "_IDENTITY": "...",
+  "_LANGUAGE": "...",
+  "_VOICE":    "...",
+  "_RULES":    ["rule_01", "...", "rule_14"],
+  "_FORMAT_AND_FLAGS": "..."
+}`},
+ {n:'F3',lane:'front',
+  s:{he:'בניית הדאטה',en:'Build the data'},
+  t:{he:'התוכן נכתב במבנה קבוע',en:'The content is written in a fixed structure'},
+  d:{he:'הדאטה נכנס דרך ה-UI לפי מבנה מוגדר, לא כטקסט חופשי. כל סעיף כאן יהפוך בהמשך לקובץ markdown אחד — וזה מה שמאפשר לערוך ולהטמיע מחדש קובץ בודד.',en:'Data goes in through the UI in a defined structure, not as free text. Each section here becomes one markdown file later — which is what makes editing and re-embedding a single file possible.'},
+  log:{he:'front · 23 data_sections',en:'front · 23 data_sections'},
+  chip:{he:'טיוטה',en:'draft'}, file:'data.sections.json',
+  code:`{
+  "data_sections": [
+    { "id": "prep",      "title": "...", "body_md": "..." },
+    { "id": "aftercare", "title": "...", "body_md": "..." },
+    { "id": "red_flags", "title": "...", "body_md": "..." }
+  ]
+}`},
+ {n:'F4',lane:'front',
+  s:{he:'מסירה לבקאנד',en:'Hand off'},
+  t:{he:'הפרונט אורז ושולח',en:'The frontend packs and sends'},
+  d:{he:'הכול נארז ל-JSON אחד ונשלח. מכאן והלאה הפרונט לא מעורב — הוא רק ימתין למזהי המשאבים שיחזרו.',en:'Everything is packed into one JSON and sent. From here the frontend is out of it — it only waits for the resource ids to come back.'},
+  log:{he:'POST /apps → 202 accepted',en:'POST /apps → 202 accepted'},
+  chip:{he:'JSON',en:'JSON'}, file:'POST /apps',
+  code:`POST /apps
+Content-Type: application/json
+
+{
+  "app_name": "gali-ivf",
+  "ui_template": "clinic-rtl",
+  "sp_sections":   { ... },
+  "rules":         [ ... ],
+  "data_sections": [ ... ]
+}`},
+ {n:'B1',lane:'back',
+  s:{he:'דלי S3',en:'S3 bucket'},
+  t:{he:'נוצר דלי בשם האפליקציה',en:'A bucket is created, named after the app'},
+  d:{he:'נוצר ראשון כי כל שאר השלבים מצביעים אליו. דלי נפרד לכל אפליקציה — זו ההפרדה שמונעת דליפת תוכן בין פרויקטים.',en:'Created first because every later step points at it. A separate bucket per app — this is the separation that keeps content from leaking between projects.'},
+  log:{he:'s3 · create_bucket(gali-ivf)',en:'s3 · create_bucket(gali-ivf)'},
+  chip:{he:'JSON',en:'JSON'}, file:'aws · s3',
+  code:`s3.create_bucket(
+    Bucket="gali-ivf",
+    region="eu-west-1"
+)
+→ s3://gali-ivf/`},
+ {n:'B2',lane:'back',
+  s:{he:'JSON ← קבצי md',en:'JSON → md files'},
+  t:{he:'הסעיפים הופכים לקבצי markdown',en:'The sections become markdown files'},
+  d:{he:'הבקאנד מפרק את סעיפי החוקים והדאטה לקבצי md ומעלה אותם לדלי. מהרגע הזה הקבצים האלה הם מקור האמת — כל תיקון תוכן נעשה בהם.',en:'The backend splits the rules and data sections into md files and uploads them. From here those files are the source of truth — every content fix is made in them.'},
+  log:{he:'s3 · put_object × 23 → kb/',en:'s3 · put_object × 23 → kb/'},
+  chip:{he:'קבצי md',en:'md files'}, file:'s3://gali-ivf/kb/',
+  code:`kb/
+├── prep.md
+├── aftercare.md
+├── red_flags.md
+└── ...  (23 files)`},
+ {n:'B3',lane:'back',
+  s:{he:'הרכבת SP',en:'Assemble SP'},
+  t:{he:'חמשת החלקים הופכים למחרוזת אחת',en:'The five sections become one string'},
+  d:{he:'הבקאנד מפרסר את חלקי ה-SP ומשרשר אותם לפי הסדר הקבוע. התוצאה נשמרת כגרסה, כדי שאפשר יהיה לדעת באיזה פרומפט בדיוק רצה תשובה מסוימת.',en:'The backend parses the SP sections and concatenates them in the fixed order. The result is saved as a version, so you can tell exactly which prompt produced a given answer.'},
+  log:{he:'prompt · built · 4,180 chars',en:'prompt · built · 4,180 chars'},
+  chip:{he:'קבצי md',en:'md files'}, file:'system_prompt.txt',
+  code:`SYSTEM_PROMPT =
+    _IDENTITY
+  + _LANGUAGE
+  + _VOICE
+  + _RULES
+  + _FORMAT_AND_FLAGS
+
+→ s3://gali-ivf/prompt/v1.txt`},
+ {n:'B4',lane:'back',
+  s:{he:'KB ו-DS',en:'KB & DS'},
+  t:{he:'מאגר ידע ומקור נתונים בפרמטרים קבועים',en:'Knowledge base and data source, fixed parameters'},
+  d:{he:'ה-KB וה-DS נוצרים עם אותם פרמטרים לכל אפליקציה, ואז רץ ingestion job שהופך את קבצי ה-md לוקטורים. זה השלב הארוך ביותר.',en:'The KB and DS are created with the same parameters for every app, then an ingestion job turns the md files into vectors. This is the longest step.'},
+  log:{he:'bedrock · kb + ds · ingestion started',en:'bedrock · kb + ds · ingestion started'},
+  chip:{he:'משאבים',en:'resources'}, file:'aws · bedrock',
+  code:`create_knowledge_base(
+    chunking   = "hierarchical",
+    parent     = 500,   # tokens
+    child      = 150,
+    embeddings = "cohere.embed-multilingual-v3",
+    dimensions = 1024
+)
+create_data_source(source = "s3://gali-ivf/kb/")
+start_ingestion_job()`},
+ {n:'B5',lane:'back',
+  s:{he:'טבלת שיחות',en:'Chat table'},
+  t:{he:'DynamoDB להיסטוריית שיחה',en:'DynamoDB for chat history'},
+  d:{he:'טבלה נפרדת לכל אפליקציה, ממופתחת ב-session id שנוצר בצד הלקוח. ההיסטוריה פגה ב-TTL, ולכן אין כאן צבירה של דאטה לאורך זמן.',en:'A separate table per app, keyed by a client-generated session id. History expires on a TTL, so nothing accumulates over time.'},
+  log:{he:'dynamodb · create_table(gali-ivf-chat)',en:'dynamodb · create_table(gali-ivf-chat)'},
+  chip:{he:'משאבים',en:'resources'}, file:'aws · dynamodb',
+  code:`create_table(
+    name = "gali-ivf-chat",
+    key  = "session_id",
+    ttl  = "expires_at"   # 24h
+)`},
+ {n:'B6',lane:'back',
+  s:{he:'רישום ברג׳יסטרי',en:'Registry row'},
+  t:{he:'שורה אחת בטבלת המפעל',en:'One row in the factory table'},
+  d:{he:'כאן האפליקציה הופכת לקיימת מבחינת המערכת. בלי השורה הזו הדשבורדים לא יראו אותה, גם אם כל המשאבים כבר עומדים.',en:'This is where the app becomes real as far as the system is concerned. Without this row the dashboards will not see it, even if every resource is already standing.'},
+  log:{he:'registry · put_item(gali-ivf) · ok',en:'registry · put_item(gali-ivf) · ok'},
+  chip:{he:'משאבים',en:'resources'}, file:'factory-registry',
+  code:`{
+  "ui_id":       "clinic-rtl",
+  "app_name":    "gali-ivf",
+  "dynamo_id":   "gali-ivf-chat",
+  "kb_id":       "CHAU7BWP4S",
+  "created_at":  "2026-08-06T09:14:02Z"
+}`},
+ {n:'B7',lane:'back',
+  s:{he:'תת-דומיין',en:'Subdomain'},
+  t:{he:'כתובת לאפליקציה',en:'An address for the app'},
+  d:{he:'השלב האחרון: הקצאת תת-דומיין. כנראה CNAME, אבל סוג הרשומה והתעודה עוד לא נסגרו — עד שזה ייסגר, האפליקציה קיימת ועובדת בלי כתובת ציבורית.',en:'The last step: allocating a subdomain. Probably a CNAME, but the record type and the certificate are not settled — until they are, the app exists and works without a public address.'},
+  log:{he:'dns · gali-ivf.* · TBD',en:'dns · gali-ivf.* · TBD'},
+  chip:{he:'חי',en:'live'}, file:'dns', tbd:true,
+  code:`gali-ivf.<factory-domain>
+    CNAME → <app endpoint>
+
+# record type: TBD
+# certificate: TBD`}
+];
+
+const SP = [
+ {k:'_IDENTITY',t:{he:'מי היא',en:'Who it is'},
+  d:{he:'ההגדרה של האפליקציה: התחום, הקהל, ומה מחוץ לתחום. זה החלק שמשתנה הכי הרבה בין אפליקציות במפעל.',en:'The definition of the app: the domain, the audience, and what is out of scope. This is the section that differs most between apps in the factory.'},
+  c:`You are <APP_NAME>, an assistant for
+<DOMAIN> at <ORGANIZATION>.
+
+You answer questions from <AUDIENCE>.
+You do not answer questions outside <DOMAIN>.`},
+ {k:'_LANGUAGE',t:{he:'באיזו שפה',en:'Which language'},
+  d:{he:'שפת התשובה, כיוון הכתיבה, וההתמודדות עם שאלות שנשאלות בשפה אחרת. נפרד מהזהות כי אותה אפליקציה עשויה לעבור שפה בלי לשנות שום דבר אחר.',en:'The answer language, the writing direction, and what to do with a question asked in another language. Kept apart from identity because an app may switch language without anything else changing.'},
+  c:`Always answer in Hebrew.
+Use plain Hebrew, no transliteration of medical terms
+unless the term has no Hebrew equivalent.
+If the question arrives in another language,
+answer in Hebrew anyway.`},
+ {k:'_VOICE',t:{he:'איך היא נשמעת',en:'How it sounds'},
+  d:{he:'הטון, האורך, והמרחק. החלק שקובע אם התשובה מרגישה כמו עלון או כמו בן אדם — ובקליניקה זה בדיוק מה שמכריע אם אנשים ממשיכים לשאול.',en:'Tone, length, and distance. This is what decides whether an answer reads like a leaflet or like a person — and in a clinic that is exactly what decides whether people keep asking.'},
+  c:`Warm, direct, unhurried.
+2-5 sentences unless more is genuinely needed.
+Never open with an apology.
+Acknowledge the feeling before the facts
+when the question carries worry.`},
+ {k:'_RULES',t:{he:'מה אסור ומה חובה',en:'What is required and forbidden'},
+  d:{he:'החוקים הקשיחים — בטיחות, גבולות, ומה לעשות כשלא ברור. זה החלק היחיד שהיוצר עורך כרשימה, וגם החלק שהכי צריך תיעוד של מי אישר אותו.',en:'The hard rules — safety, boundaries, and what to do when something is unclear. The only section the creator edits as a list, and the one that most needs a record of who approved it.'},
+  c:`1. Never give a dose, a schedule or a diagnosis.
+2. If a question could apply to two different
+   procedures, ask which one before answering.
+3. Any red flag is referred, even if the user
+   asks you not to.
+4. Never decide on the user's behalf.
+...`},
+ {k:'_FORMAT_AND_FLAGS',t:{he:'מבנה התשובה והדגלים',en:'Answer shape and flags'},
+  d:{he:'מבנה הפלט והדגלים שהמערכת קוראת אחרי התשובה — למשל סימון שהתשובה דורשת הפניה. זה מה שמחבר בין מה שהמודל כתב לבין מה שהאפליקציה עושה עם זה.',en:'The output shape and the flags the system reads after the answer — for example, marking that an answer needs a referral. This is what connects what the model wrote to what the app does with it.'},
+  c:`Return the answer text only, no headings.
+Cite the source file for any factual claim.
+Emit flags at the end, machine-read, never shown:
+  [REFERRAL] [RED_FLAG] [OUT_OF_SCOPE]`}
+];
+
+/* ---------------- state ---------------- */
+let lang='he', idx=-1, timer=null, printed=[], spSel=0;
+const $=s=>document.querySelector(s);
+const laneF=$('#lane-front'), laneB=$('#lane-back'), chip=$('#chip'), rail=$('#rail'), cons=$('#console');
+
+/* build stations */
+FLOW.forEach((st,i)=>{
+  const b=document.createElement('button');
+  b.className='station'; b.dataset.lane=st.lane; b.dataset.i=i;
+  b.innerHTML='<span class="num">'+st.n+'</span><span class="nm"></span>';
+  b.addEventListener('click',()=>{stop();goTo(i);});
+  (st.lane==='front'?laneF:laneB).appendChild(b);
+});
+const stations=[...document.querySelectorAll('.station')];
+
+/* ---------------- language ---------------- */
+function applyLang(l){
+  lang=l;
+  document.documentElement.lang = l;
+  document.documentElement.dir = (l==='he')?'rtl':'ltr';
+  document.querySelectorAll('[data-en]').forEach(el=>{
+    if(el.dataset.he===undefined) el.dataset.he=el.textContent.trim();
+    el.textContent = (l==='he')? el.dataset.he : el.dataset.en;
+  });
+  $('#btn-he').setAttribute('aria-pressed', l==='he');
+  $('#btn-en').setAttribute('aria-pressed', l==='en');
+  stations.forEach((b,i)=>{ b.querySelector('.nm').textContent = FLOW[i].s[l]; });
+  renderStep(); renderLog(); renderSP();
+  requestAnimationFrame(moveChip);
+}
+$('#btn-he').addEventListener('click',()=>applyLang('he'));
+$('#btn-en').addEventListener('click',()=>applyLang('en'));
+
+/* ---------------- flow ---------------- */
+function renderStep(){
+  const s = idx<0 ? null : FLOW[idx];
+  if(!s){
+    $('#step-n').textContent='STEP 00';
+    $('#step-t').textContent = lang==='he'?'עוד לא התחלנו':'Not started yet';
+    $('#step-d').textContent = lang==='he'
+      ? 'לחצי הרצה כדי לראות את היצירה רצה מקצה לקצה, או שלב כדי לעבור לבד.'
+      : 'Press run to watch creation go end to end, or step through it yourself.';
+    $('#art-file').textContent='app.config.json';
+    $('#art-code').textContent = lang==='he'
+      ? '// ממתין לטריגר CREATE'
+      : '// waiting for the CREATE trigger';
+    $('#art-dot').style.background='var(--line)';
+    chip.classList.add('idle');
+    return;
+  }
+  $('#step-n').textContent = 'STEP '+String(idx+1).padStart(2,'0')+' · '+s.n;
+  $('#step-t').innerHTML = s.t[lang] + (s.tbd?'<span class="flag">TBD</span>':'');
+  $('#step-d').textContent = s.d[lang];
+  $('#art-file').textContent = s.file;
+  $('#art-code').textContent = s.code;
+  $('#art-dot').style.background = s.lane==='front'?'var(--front)':(s.tbd?'var(--tbd)':'var(--back)');
+  chip.classList.remove('idle');
+  chip.textContent = s.chip[lang];
+}
+function renderLog(){
+  cons.innerHTML='';
+  printed.forEach(i=>{
+    const s=FLOW[i], line=document.createElement('span');
+    let cls = s.lane==='front'?'front':'back';
+    if(['B1','B2','B4','B5','B6'].includes(s.n)) cls='store';
+    if(s.tbd) cls='tbd';
+    line.className='l '+cls;
+    line.innerHTML='<span class="t">'+s.n+'</span>  '+s.log[lang];
+    cons.appendChild(line);
+  });
+  if(printed.length===FLOW.length){
+    const done=document.createElement('span');
+    done.className='l ok';
+    done.innerHTML='<span class="t">✓ </span> '+(lang==='he'?'האפליקציה קיימת · gali-ivf':'application created · gali-ivf');
+    cons.appendChild(done);
+  }
+  cons.scrollTop=cons.scrollHeight;
+}
+function moveChip(){
+  if(idx<0) return;
+  const r=rail.getBoundingClientRect(), s=stations[idx].getBoundingClientRect();
+  const x = s.left-r.left + s.width/2 - chip.offsetWidth/2;
+  const y = s.top -r.top  + s.height/2 - chip.offsetHeight/2;
+  chip.style.transform='translate('+x+'px,'+y+'px)';
+}
+function goTo(i){
+  idx=i;
+  printed = FLOW.map((_,k)=>k).slice(0,i+1);
+  stations.forEach((b,k)=>{
+    b.classList.toggle('active',k===i);
+    b.classList.toggle('done',k<i);
+  });
+  renderStep(); renderLog(); moveChip();
+}
+function step(){
+  if(idx>=FLOW.length-1){ stop(); return; }
+  goTo(idx+1);
+  if(idx===FLOW.length-1) stop();
+}
+function play(){
+  if(idx>=FLOW.length-1) reset();
+  timer=setInterval(step,2300); step();
+  $('#play').textContent = lang==='he'?'⏸ עצירה':'⏸ Pause';
+  $('#play').dataset.he='⏸ עצירה'; $('#play').dataset.en='⏸ Pause';
+}
+function stop(){
+  if(timer){clearInterval(timer);timer=null;}
+  $('#play').textContent = lang==='he'?'▶ הרצה':'▶ Run';
+  $('#play').dataset.he='▶ הרצה'; $('#play').dataset.en='▶ Run';
+}
+function reset(){
+  stop(); idx=-1; printed=[];
+  stations.forEach(b=>b.classList.remove('active','done'));
+  renderStep(); renderLog();
+}
+$('#play').addEventListener('click',()=>{ timer?stop():play(); });
+$('#next').addEventListener('click',()=>{ stop(); step(); });
+$('#reset').addEventListener('click',reset);
+window.addEventListener('resize',moveChip);
+
+/* ---------------- system prompt ---------------- */
+function renderSP(){
+  const s=SP[spSel];
+  $('#sp-t').textContent=s.t[lang];
+  $('#sp-d').textContent=s.d[lang];
+  $('#sp-file').textContent=s.k;
+  $('#sp-code').textContent=s.c;
+  document.querySelectorAll('.tok').forEach((b,i)=>b.setAttribute('aria-pressed', i===spSel));
+}
+document.querySelectorAll('.tok').forEach(b=>{
+  b.addEventListener('click',()=>{ spSel=+b.dataset.sp; renderSP(); });
+});
+
+/* ---------------- init ---------------- */
+applyLang('he');
+reset();
+</script>
+</body>
+</html>
