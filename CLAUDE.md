@@ -76,6 +76,26 @@ How to use it:
 - An ADR with `Status: open` blocks the code that depends on it. Build
   everything that does not depend on it, and say what is blocked.
 
+## GIT
+
+Binding. Stricter than the global working rules where the two overlap; nothing
+here contradicts them.
+
+1. **Commit after every meaningful change**, not batched at the end of a turn.
+   Conventional Commits: `feat` `fix` `docs` `chore` `refactor` `test`. The
+   subject says what changed and why. Never `update files`.
+2. **One branch per feature or milestone unit**, named for the unit, branched off
+   `main`: `chore/scaffold`, `feat/admin-dashboard`, `feat/data-center`,
+   `docs/adr-<n>`.
+3. **Merge when the unit is done and coherent** — never on a commit count. A
+   branch that has run long without closing means the unit was scoped too big:
+   say so and split it rather than merging a partial one. **Never commit directly
+   to `main` after the baseline commit. Always ask before merging.**
+4. **Every ADR decision gets its own commit**, referencing the ADR number in the
+   subject.
+5. **Never force-push. Never rewrite history that has been pushed. Never amend a
+   commit I have already seen.**
+
 ## CODE CONVENTIONS
 
 Binding on every task in this repo.
