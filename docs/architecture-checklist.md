@@ -175,6 +175,7 @@ Order is identical in both sources and is the one thing not in dispute.
 | U13 | Server Components by default, `"use client"` marked deliberately | `M1` |
 | U14 | Mock renders a half-created app from day one, not as a bolted-on edge case | `M1` |
 | U15 | README notes that a static export is impossible | `M1` |
+| U16 | Create app: live character count of the **composed** prompt against the 4096 cap, and save is blocked above it. `composeSystemPrompt` fails rather than truncating. | `M1`, → 0016. **Not in the spec or the build plan** — the cap is a Bedrock service limit found by reading Gali. |
 
 ## 12. Open items — the full TBD set
 
@@ -205,5 +206,5 @@ Order is identical in both sources and is the one thing not in dispute.
 | N8 | S3 bucket naming constraints | Bucket names are globally unique, lowercase, DNS-safe. `appName` is used verbatim as the bucket name, so `appName` validation in the zod schema is really S3 naming law, and a name collision is a create failure nobody has assigned an error message to. |
 | N9 | Delete semantics for a partial app | The delete confirmation names four resources. A partial app has fewer than four. |
 | N10 | Per-document KB metadata schema | `gali` — Gali validates every KB document against a required 9-key schema before any network call: `doc_type`, `procedure_type`, `gestational_age_max_weeks` (optional), `topic_tags` (1–10 non-empty strings), `contains_red_flags`, `contains_emotional_support`, `language`, `source`, `version`. This is the real answer to *"a defined structure, not free text"* and it is absent from the spec and from `AppConfig`. Feeds 0010. |
-| N11 | The 4096-character prompt cap (`S9`) | A hard Bedrock limit on the RetrieveAndGenerate prompt template. The create form composes five creator-authored parts with no length gate, so a valid-looking `AppConfig` can produce an unusable prompt. Nothing in the spec, the build plan, or any ADR mentions it. |
+| N11 | The 4096-character prompt cap (`S9`) | **Settled by 0016.** A hard Bedrock limit on the RetrieveAndGenerate prompt template. `composeSystemPrompt` validates and fails; the create form counts and blocks. See `U16`. |
 | N12 | Disclaimers already exist in Gali, twice | `gali` — as `data/Disclaimers 210626.md`, an ingested KB document with `doc_id="disclaimers"`, **and** as prompt text with frequency rules in `_FORMAT_AND_FLAGS`. Both lanes, which is a data point for 0011, not a decision. |
