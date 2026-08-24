@@ -109,9 +109,10 @@ inference time, where the conflict actually happens.
 
 ## Consequences
 
-- `lib/composeSystemPrompt.ts` takes the five parts and returns one string, and
-  it also emits the precedence text above. That text is a named constant in the
-  strings module, not a literal in the function.
+- `lib/composeSystemPrompt.ts` takes the five parts and returns one string, and it
+  emits the precedence text above **when the app's precedence flag is on** — see
+  the amendment below. That text is a named constant in the strings module, not a
+  literal in the function.
 - The `_RULES` part is authored as a list in the create form (add / remove /
   reorder) and joined for the prompt. `composeSystemPrompt` therefore takes
   `string[]` for that one part; the other four are strings.
@@ -122,6 +123,7 @@ inference time, where the conflict actually happens.
   KB edit takes effect only through re-ingestion. The Admin form treats a
   prompt-part edit as the heavier action.
 - `rules` does not appear as a top-level field in `AppConfig`. See 0008.
+
 ### The separator, and the precedence text — resolved by reading Gali
 
 Not a design question. Gali is app #1 and must pass its existing 380-question
@@ -150,9 +152,34 @@ a retrieved file. The nearest text, *"priority order — overrides any other
 rule"*, is triage ordering, not prompt-versus-retrieval precedence.
 
 Adding the precedence text to Gali's composed prompt is therefore a behaviour
-change against a validated system under an ethics-committee freeze. **Not done,
-and not to be done without a separate decision.** The requirement in the Decision
-section above stands for apps 2..n; for Gali it is held.
+change against a validated system under an ethics-committee freeze.
+
+**Amended 2026-08-24 — the precedence text is a per-app flag.**
+
+- It is **a field on the app**, not a constant of the runtime.
+- **Default on for new apps.** An app created from now on gets the precedence
+  text unless someone turns it off.
+- **Off for Gali.** Adding it to Gali's prompt is an unauthorised behaviour
+  change and the flag records that as configuration rather than as an exception
+  buried in code.
+
+This is what makes "Gali runs on the generic runtime" survivable: the generic
+runtime can carry a rule that app #1 does not use, as long as using it is a
+setting. A hardcoded precedence paragraph would mean the runtime cannot host Gali
+without changing Gali.
+
+Consequences of the flag itself:
+
+- The flag is part of the app's configuration, so it is one more field whose name
+  and casing follow 0008 and whose home — `AppConfig`, the registry row, or both —
+  is not settled here.
+- `composeSystemPrompt` becomes conditional on it: the same five parts compose to
+  two different strings depending on the flag. Its tests need both paths.
+- The text counts against the 4096-character cap when the flag is on. See 0016 —
+  the budget available for creator-authored text is not a constant.
+- A default-on flag means the first app created after Gali behaves differently
+  from Gali in a way nobody typed. That is the intent, and it needs to be visible
+  in the create form rather than implicit.
 
 One further constraint found in the same read, and it is not in the spec or the
 checklist: Gali's live prompt is **not** the five-part composition. See the
