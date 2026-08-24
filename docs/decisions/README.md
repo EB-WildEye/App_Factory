@@ -43,3 +43,4 @@ Date: YYYY-MM-DD
 | [0013](0013-rollback-ownership.md) | Rollback ownership on partial create | open |
 | [0014](0014-create-app-async-vs-sync.md) | createApp: 202 async vs synchronous ids | open |
 | [0015](0015-factory-api-route-shapes.md) | factoryApi route shapes | open |
+| [0016](0016-composed-prompt-length-cap.md) | Composed prompt has a hard 4096-character cap | accepted |
