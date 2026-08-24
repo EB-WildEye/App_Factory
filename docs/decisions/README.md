@@ -34,7 +34,7 @@ Date: YYYY-MM-DD
 | [0004](0004-nextjs-bun-over-vite.md) | Next.js + Bun over Vite | accepted |
 | [0005](0005-bff-over-browser-to-api-gateway.md) | BFF over browser-to-API-Gateway | accepted |
 | [0006](0006-backend-step-count-7-vs-6.md) | Backend step count: 7 vs 6 | open |
-| [0007](0007-registry-row-field-names.md) | Registry row field names | open |
+| [0007](0007-registry-row-field-names.md) | Registry row field names | accepted |
 | [0008](0008-appconfig-field-names.md) | AppConfig field names and casing | accepted |
 | [0009](0009-rules-placement.md) | Where `rules` live | accepted |
 | [0010](0010-data-file-structure.md) | Data file structure a creator must supply | open |

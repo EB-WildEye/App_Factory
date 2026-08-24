@@ -1,6 +1,6 @@
 # 0007 — Registry row field names
 
-Status: open
+Status: accepted
 Date: 2026-08-23
 
 ## Context
@@ -63,28 +63,69 @@ Orthogonal, and needed either way:
 
 ## Decision
 
-Still **open** overall. Three of the four sub-questions are settled; the fourth,
-which is the one this ADR is titled after, is not.
+The registry row is exactly these five attributes, `snake_case` as stored, per
+0008:
 
-**Settled — casing.** Answered by 0008: `snake_case` on the wire and in the
-stored DynamoDB attributes, `camelCase` in TypeScript, one mapper inside the
-route handlers.
+| attribute | role |
+| --------- | ---- |
+| `app_name` | **partition key** |
+| `ui_id` | ordinary attribute, holds the UI template name |
+| `dynamo_table_id` | the chat-history table |
+| `knowledge_base_id` | the Bedrock KB |
+| `created_at` | ISO 8601 |
 
-**Settled — partition key: `app_name`.** `ui_id` is an ordinary attribute holding
-the UI template name. It is not a key, and it is not unique per app — the value
-`clinic-rtl` is a template identifier, and two apps built from the same template
-would collide.
+Casing follows 0008: `snake_case` on the wire and in the stored DynamoDB
+attributes, `camelCase` in TypeScript, translated once inside the route handlers.
+So the TypeScript type is `appName`, `uiId`, `dynamoTableId`, `knowledgeBaseId`,
+`createdAt`.
 
-**Settled — `created_at` is in the row.** The spec's services card, which lists
-four fields, is an abbreviation, not a contradiction.
+The two names that differed by more than casing are resolved toward the
+descriptive form: **`dynamo_table_id`** and **`knowledge_base_id`**, not the
+spec's `dynamo_id` / `kb_id`.
 
-**Still open — the two attribute names** that differ by more than casing:
-`dynamo_id` vs `dynamoTableId`, and `kb_id` vs `knowledgeBaseId`. 0008 fixes the
-*form* of a name, not the *choice* of name.
+Two attributes are deliberately **not** in the row yet, and neither is blocked by
+this ADR: provisioning state (checklist `G7`, decided with 0013) and the app
+address (`G8`, decided with 0012). Both are additive — a new attribute on a
+DynamoDB row costs nothing, unlike the key.
 
-Also still open, and both are `gap` rather than `conflict`: the attribute
-carrying provisioning state (`complete` / `partial` / `failed`, checklist `G7`,
-see 0013) and the attribute carrying the app address (`G8`, see 0012).
+## Reasoning
+
+`app_name` is the only viable key. The spec already calls it *"the key that ties
+bucket, table and registry row together"*, and it is unique per app by
+construction: it is the S3 bucket name, and S3 bucket names are globally unique.
+`ui_id`'s position first in the spec's JSON sample is formatting, not a key
+declaration — and its value `clinic-rtl` is a template name, so two apps from the
+same template would collide on it immediately.
+
+`dynamo_table_id` and `knowledge_base_id` over `dynamo_id` and `kb_id` because
+`dynamo_id` does not say *which* Dynamo thing it identifies — the factory has two
+DynamoDB tables in play per app, the chat-history table and the registry itself,
+and an attribute called `dynamo_id` sitting inside the registry is ambiguous about
+which one it means. `kb_id` is merely terse; expanding it keeps the row readable
+without abbreviation rules.
+
+`created_at` costs one attribute and answers the first question anyone asks of a
+partial or failed row: when did this appear.
+
+## Consequences
+
+- **A partition key cannot be changed without rebuilding the table.** There is no
+  rename and no in-place migration: it means creating a new table, copying every
+  row, and repointing every reader. For the only record of which apps exist, that
+  is a migration with an outage in it. This is the most expensive line in this ADR
+  and it is why the key was settled before any code reads the table.
+- `appName` is the lookup key, so `getApp(appName)` (checklist `E12`) is a
+  `GetItem`, not a scan. `listApps()` remains a scan and will need a pagination
+  story eventually.
+- Because `appName` keys the registry *and* names the S3 bucket, S3 bucket naming
+  law is the real constraint on `appName` validation in the zod schema — lowercase,
+  DNS-safe, globally unique (checklist `N8`). A name collision is a create failure
+  that still needs an error message.
+- The registry-row type, `listApps()`'s return type, and the App list columns are
+  unblocked.
+- The mapper in `app/api` now has a concrete first table to encode, and
+  `dynamo_table_id` ↔ `dynamoTableId` is a pure casing transform, which keeps the
+  mapper mechanical rather than a lookup table of special cases.
 
 ## Reasoning
 

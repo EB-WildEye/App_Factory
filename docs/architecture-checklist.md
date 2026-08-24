@@ -122,8 +122,8 @@ Order is identical in both sources and is the one thing not in dispute.
 | - | --------------- | ------------------ | ------ |
 | G1 | `ui_id` (`"clinic-rtl"`) | `uiId` | `settled` 0007 — an ordinary attribute holding the UI template name. Not a key, not unique per app. |
 | G2 | `app_name` | `appName` | `settled` 0007 — **the partition key.** |
-| G3 | `dynamo_id` (`"gali-ivf-chat"`) | `dynamoTableId` | casing `settled` 0008; **name still open** → 0007 |
-| G4 | `kb_id` (`"CHAU7BWP4S"`) | `knowledgeBaseId` | casing `settled` 0008; **name still open** → 0007. Note `gali`: `CHAU7BWP4S` is not a placeholder — it is Gali's real production KB id, hard-coded at `scripts/ingest_kb.py:32`. |
+| G3 | `dynamo_id` (`"gali-ivf-chat"`) | `dynamoTableId` | `settled` 0007 — stored as **`dynamo_table_id`**, not the spec's `dynamo_id`. |
+| G4 | `kb_id` (`"CHAU7BWP4S"`) | `knowledgeBaseId` | `settled` 0007 — stored as **`knowledge_base_id`**. Note `gali`: `CHAU7BWP4S` is not a placeholder — it is Gali's real production KB id, hard-coded at `scripts/ingest_kb.py:32`. |
 | G5 | `created_at` (ISO 8601) | — | `settled` 0007 — it is in the row. |
 | G6 | partition key | `app_name`. Cannot be changed later without rebuilding the table. | `settled` 0007 |
 | G7 | provisioning state | — | The App list must show `complete` / `partial` / `failed`. Nothing in the row carries it. | `gap` → 0013 |
