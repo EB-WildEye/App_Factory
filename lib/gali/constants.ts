@@ -1,0 +1,225 @@
+/**
+ * Gali production constants, copied verbatim out of the read-only Gali repos.
+ *
+ * Every value here is a value to be COPIED, never chosen. `docs/gali-ground-truth.md`
+ * records the provenance of each one — file and line — and lists explicitly what the
+ * Gali repos do NOT state. Nothing in this module is inferred: a value the repos are
+ * silent about is absent here rather than guessed.
+ *
+ * Sources, both read-only:
+ *   backend   Gali-AWS-backend  @ ab6a325 (2026-08-02)
+ *   frontend  Gali-frontend     @ e950553 (2026-08-02)
+ *
+ * The prompt strings are the values AFTER the import-time phone-link substitution in
+ * `shared/shared/prompt.py:394-404` — what production actually sends, not the
+ * pre-substitution literals in the source file.
+ *
+ * `tests/gali/constants.golden.test.ts` pins every string in this module to the
+ * SHA-256 digests recorded in `docs/gali-ground-truth.md`. Editing a value here
+ * without re-reading Gali fails that test.
+ */
+
+/** AWS region. `shared/shared/config.py:14`, `scripts/ingest_kb.py:34`. */
+export const GALI_REGION: string = 'eu-west-1';
+
+/** Bedrock Knowledge Base id. `scripts/ingest_kb.py:32`, `samconfig.toml:10`. */
+export const GALI_KNOWLEDGE_BASE_ID: string = '[redacted:kb-id]';
+
+/**
+ * The KB has two data source ids in the repo and they are not the same value. Both are
+ * recorded, because the repo nowhere states that either supersedes the other.
+ *
+ * - `GALI_CUSTOM_DATA_SOURCE_ID` — the CUSTOM data source the markdown is pushed into
+ *   with `IngestKnowledgeBaseDocuments` (`scripts/ingest_kb.py:33`,
+ *   `scripts/kb_verify_reconstruct.py:26`).
+ * - `GALI_SYNC_DATA_SOURCE_ID` — the `DataSourceId` the deployed sync Lambda calls
+ *   `StartIngestionJob` against (`samconfig.toml:10` into `template.yaml:238`).
+ */
+export const GALI_CUSTOM_DATA_SOURCE_ID: string = '[redacted:data-source-id-custom]';
+export const GALI_SYNC_DATA_SOURCE_ID: string = '[redacted:data-source-id-sync]';
+
+/** Data source type on the ingest path. `scripts/ingest_kb.py:222`. */
+export const GALI_DATA_SOURCE_TYPE: string = 'CUSTOM';
+
+/** Inference profile ids. `samconfig.toml:10`. */
+export const GALI_PRIMARY_MODEL_ID: string = '[redacted:model-id-primary]';
+export const GALI_FALLBACK_MODEL_ID: string = '[redacted:model-id-fallback]';
+
+/**
+ * Retrieval and inference settings. All three are environment-variable defaults in
+ * `shared/shared/config.py:27,34,35`; neither `template.yaml` nor `samconfig.toml`
+ * overrides them, so these are the values production runs with.
+ */
+export const GALI_RETRIEVAL_TOP_K: number = 5;
+export const GALI_GENERATION_MAX_TOKENS: number = 4096;
+export const GALI_GENERATION_TEMPERATURE: number = 0.3;
+
+/** Query transformation, chosen over Bedrock's default rewriter. `functions/chat/app.py:123`. */
+export const GALI_QUERY_TRANSFORMATION_TYPE: string = 'QUERY_DECOMPOSITION';
+
+/**
+ * Bedrock RetrieveAndGenerate hard-caps `textPromptTemplate` at 4096 characters and
+ * requires the placeholder. Gali asserts both at import time
+ * (`shared/shared/prompt.py:406-416`) — which is where ADR 0016 got the number.
+ */
+export const BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT: number = 4096;
+export const BEDROCK_SEARCH_RESULTS_PLACEHOLDER: string = '$search_results$';
+
+/**
+ * THE LIVE PROMPT. The string production sends as `textPromptTemplate`
+ * (`shared/shared/prompt.py:300-380`, sent at `functions/chat/app.py:127`). It is
+ * hand-written and condensed — it is NOT the five parts joined.
+ */
+export const GALI_RAG_PROMPT_TEMPLATE: string = "[redacted:rag-prompt-template]";
+
+/**
+ * The five documentation parts (`shared/shared/prompt.py:21-288`) and the join that
+ * builds `SYSTEM_PROMPT` at `shared/shared/prompt.py:293`. The separator is the empty
+ * string: every part carries its own trailing newlines.
+ *
+ * The composed value is documentation in Gali, not the live prompt. At 11,492
+ * characters it is nearly 3x the 4096 cap, so it could never be sent as one template.
+ */
+export type GaliSystemPromptPartName =
+  | 'identity'
+  | 'language'
+  | 'voice'
+  | 'rules'
+  | 'formatAndFlags';
+
+export const GALI_SYSTEM_PROMPT_PART_ORDER: readonly GaliSystemPromptPartName[] = [
+  'identity',
+  'language',
+  'voice',
+  'rules',
+  'formatAndFlags',
+] as const;
+
+export const GALI_SYSTEM_PROMPT_SEPARATOR: string = '';
+
+export const GALI_SYSTEM_PROMPT_PARTS: Readonly<Record<GaliSystemPromptPartName, string>> = {
+  identity: "[redacted:prompt-part-identity]",
+  language: "[redacted:prompt-part-language]",
+  voice: "[redacted:prompt-part-voice]",
+  rules: "[redacted:prompt-part-rules]",
+  formatAndFlags: "[redacted:prompt-part-formatAndFlags]",
+};
+
+/** The five parts joined the way Gali joins them. Equal to Gali's `SYSTEM_PROMPT`. */
+export const GALI_SYSTEM_PROMPT: string = GALI_SYSTEM_PROMPT_PART_ORDER.map(
+  (name) => GALI_SYSTEM_PROMPT_PARTS[name],
+).join(GALI_SYSTEM_PROMPT_SEPARATOR);
+
+/**
+ * The triage classifier: one Bedrock `Converse` call per turn, made BEFORE retrieval
+ * (`shared/shared/redflag_classifier.py:213-247`, called at `functions/chat/app.py:416`).
+ * Its prompt is locked at commit a635c2e (2026-07-05) — the last commit to touch that
+ * file, and the commit the validation changelog names as the locked prompt.
+ *
+ * Any API error, empty response, or unparseable label resolves to `ER`, so a missed
+ * classification can never suppress an escalation.
+ */
+export const GALI_TRIAGE_TIERS: readonly string[] = ['ER', 'CLARIFY_ER', 'SOFT', 'EXPLAIN'] as const;
+export const GALI_TRIAGE_FAIL_SAFE_TIER: string = 'ER';
+export const GALI_CLASSIFIER_MAX_TOKENS: number = 8;
+export const GALI_CLASSIFIER_TEMPERATURE: number = 0;
+export const GALI_CLASSIFIER_API: string = 'bedrock-runtime.Converse';
+export const GALI_CLASSIFIER_PROMPT_LOCKED_AT: string = 'a635c2e';
+export const GALI_CLASSIFIER_SYSTEM_PROMPT: string = "[redacted:classifier-system-prompt]";
+
+/**
+ * The chat-history table (`template.yaml:82-105`). The name is a CloudFormation `!Sub`
+ * pattern, recorded verbatim. `samconfig.toml` sets no `Stage`, so the template default
+ * `dev` applies, which matches `shared/shared/config.py:17`.
+ */
+export const GALI_CHAT_TABLE_NAME_PATTERN: string = '[redacted:chat-table-pattern]';
+export const GALI_CHAT_TABLE_STAGES: readonly string[] = ['dev', 'prod'] as const;
+export const GALI_CHAT_TABLE_NAME_DEFAULT: string = '[redacted:chat-table]';
+
+export type GaliKeyType = 'HASH' | 'RANGE';
+export type GaliAttributeType = 'S' | 'N';
+
+export interface GaliKeySchemaEntry {
+  readonly attributeName: string;
+  readonly keyType: GaliKeyType;
+  readonly attributeType: GaliAttributeType;
+}
+
+/** Composite key. A single-attribute key would not reproduce Gali. */
+export const GALI_CHAT_TABLE_KEY_SCHEMA: readonly GaliKeySchemaEntry[] = [
+  { attributeName: 'session_id', keyType: 'HASH', attributeType: 'S' },
+  { attributeName: 'timestamp', keyType: 'RANGE', attributeType: 'N' },
+] as const;
+
+/** TTL attribute name: `ttl`, not `expires_at`. `template.yaml:104`. */
+export const GALI_CHAT_TABLE_TTL_ATTRIBUTE: string = 'ttl';
+
+/**
+ * Expiry is the NEXT MIDNIGHT in Israel time, not a rolling 24 hours
+ * (`shared/shared/history.py:87-91`, `shared/shared/time_utils.py:10`). A turn saved at
+ * 23:50 expires ten minutes later, not the next evening.
+ */
+export const GALI_CHAT_TABLE_TTL_TIMEZONE: string = 'Asia/Jerusalem';
+export const GALI_CHAT_TABLE_TTL_RULE: string =
+  'next midnight in GALI_CHAT_TABLE_TTL_TIMEZONE';
+
+/**
+ * The 9-key KB document metadata schema (`scripts/ingest_kb.py:41-44`), validated in
+ * full before any network call (`scripts/ingest_kb.py:155-198`). This is the real
+ * answer to the spec's "data entered in a defined structure, not free text".
+ */
+export type GaliKbMetadataKey =
+  | 'doc_type'
+  | 'procedure_type'
+  | 'gestational_age_max_weeks'
+  | 'topic_tags'
+  | 'contains_red_flags'
+  | 'contains_emotional_support'
+  | 'language'
+  | 'source'
+  | 'version';
+
+/** Declaration order, as in `SCHEMA_KEYS`. */
+export const GALI_KB_METADATA_KEYS: readonly GaliKbMetadataKey[] = [
+  'doc_type',
+  'procedure_type',
+  'gestational_age_max_weeks',
+  'topic_tags',
+  'contains_red_flags',
+  'contains_emotional_support',
+  'language',
+  'source',
+  'version',
+] as const;
+
+/** The only optional key; omitted from the payload when absent. */
+export const GALI_KB_METADATA_OPTIONAL_KEYS: readonly GaliKbMetadataKey[] = [
+  'gestational_age_max_weeks',
+] as const;
+
+export type GaliInlineAttributeType = 'STRING' | 'NUMBER' | 'BOOLEAN' | 'STRING_LIST';
+
+/** Bedrock `inlineAttributes` type per key (`scripts/ingest_kb.py:201-214`). */
+export const GALI_KB_METADATA_ATTRIBUTE_TYPES: Readonly<
+  Record<GaliKbMetadataKey, GaliInlineAttributeType>
+> = {
+  doc_type: 'STRING',
+  procedure_type: 'STRING',
+  gestational_age_max_weeks: 'NUMBER',
+  topic_tags: 'STRING_LIST',
+  contains_red_flags: 'BOOLEAN',
+  contains_emotional_support: 'BOOLEAN',
+  language: 'STRING',
+  source: 'STRING',
+  version: 'STRING',
+};
+
+/** Fixed values the validator enforces (`scripts/ingest_kb.py:37-39,177-186`). */
+export const GALI_KB_METADATA_LANGUAGE: string = 'he';
+export const GALI_KB_METADATA_SOURCE: string = 'Wolfson Medical Center';
+export const GALI_KB_METADATA_VERSION_DEFAULT: string = '2026-06';
+export const GALI_KB_METADATA_VERSION_PATTERN: RegExp = /^\d{4}-\d{2}$/;
+
+/** `topic_tags`: 1-10 trimmed, non-empty, quote-free strings. */
+export const GALI_KB_TOPIC_TAGS_MIN: number = 1;
+export const GALI_KB_TOPIC_TAGS_MAX: number = 10;
