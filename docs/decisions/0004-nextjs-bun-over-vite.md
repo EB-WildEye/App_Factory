@@ -34,12 +34,23 @@ collapses package manager, runtime, and test runner into one tool.
 
 ## Consequences
 
-- `bun.lockb` is the lockfile of record. Installs run frozen. Dependency changes
-  are a stop-and-ask, in their own commit.
+- **`bun.lock` is the lockfile of record**, not `bun.lockb`. This ADR originally
+  said `bun.lockb`; Bun writes the text `bun.lock` by default now, and Bun 1.3.12
+  produced `bun.lock` on the first install. Installs run frozen —
+  `frozenLockfile = true` in `bunfig.toml`. Dependency changes are a
+  stop-and-ask, in their own commit.
 - The install cooldown gate lives in `bunfig.toml`, `[install] minimumReleaseAge`,
-  in **seconds**, and needs Bun >= 1.3.0. If the installed Bun is older the
-  setting is silently inert; that must be reported, not assumed.
+  in **seconds**, and needs Bun >= 1.3.0. **Confirmed on 2026-08-24: installed Bun
+  is 1.3.12, so the setting is honoured and not silently inert.** It is set to
+  259200 (3 days) and it already changed an outcome — `next` resolved to 16.3.1
+  rather than the current latest 16.3.2, which was published 2026-08-21 and is
+  too young.
 - Divergence from Gali's frontend build is accepted. Conventions are inherited,
-  tooling is not.
+  tooling is not — with one deliberate exception: **Tailwind is pinned to the 3.x
+  line (3.4.19), matching Gali, rather than 4.x.** Gali's design tokens are
+  expressed as a Tailwind 3 `theme.extend` config plus CSS variables, and porting
+  them is the point of reading Gali at all; Tailwind 4's CSS-first `@theme` model
+  would mean translating them instead of inheriting them. Revisit once the tokens
+  are actually ported.
 - Interactive surfaces must be marked individually; a reflexive `"use client"`
   near the root of the tree defeats the choice.

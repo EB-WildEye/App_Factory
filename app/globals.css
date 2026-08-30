@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base only. The design system is not invented here — see tailwind.config.ts. */
+@layer base {
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    @apply font-sans antialiased;
+  }
+}

@@ -1,0 +1,16 @@
+# Dependency install policy.
+#
+# minimumReleaseAge is in SECONDS for Bun and needs Bun >= 1.3.0 to be honoured;
+# on an older Bun it is silently inert. Installed Bun at scaffold time: 1.3.12.
+#
+# 259200 seconds = 3 days. A release younger than that is refused: poisoned
+# registry releases are typically detected and pulled within hours, so the delay
+# filters them out before they can reach a machine. Never lower this.
+
+[install]
+minimumReleaseAge = 259200
+exact = true
+
+# Every install after the first resolves nothing new. If an install wants to add
+# or move a version, that is the signal to stop, not a hiccup to work around.
+frozenLockfile = true
