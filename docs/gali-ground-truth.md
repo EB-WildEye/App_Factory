@@ -57,6 +57,7 @@ still matters, because it means `prompt.py` alone is not the final value.
 
 ### 1.2 `RAG_PROMPT_TEMPLATE`, verbatim
 
+<!-- BEGIN GENERATED: rag-prompt-template -->
 ```text
 את גלי — רכזת מידע במחלקת נשים, מרכז רפואי וולפסון.
 את לא בוט, לא רופאה, לא מטפלת — רכזת שמנחה לפי פרוטוקולי המחלקה.
@@ -103,6 +104,7 @@ still matters, because it means `prompt.py` alone is not the final value.
 # קונטקסט מהפרוטוקולים
 $search_results$
 ```
+<!-- END GENERATED: rag-prompt-template -->
 
 ---
 
@@ -163,6 +165,7 @@ spec's flags — it is an *inbound* marker injected into the query, not an
 | vs the 4096 cap | **2.81x over** | 11492 / 4096 |
 | role in production | none — reference/documentation only | `shared/shared/prompt.py:6` |
 
+<!-- BEGIN GENERATED: prompt-part-table -->
 | part | Python name | source lines | chars | trailing newlines |
 | ---- | ----------- | ------------ | ----- | ----------------- |
 | `identity` | `_IDENTITY` | `shared/shared/prompt.py:21-30` | 417 | 2 |
@@ -170,6 +173,7 @@ spec's flags — it is an *inbound* marker injected into the query, not an
 | `voice` | `_VOICE` | `shared/shared/prompt.py:55-98` | 1777 | 2 |
 | `rules` | `_RULES` | `shared/shared/prompt.py:103-214` | 5356 | 2 |
 | `formatAndFlags` | `_FORMAT_AND_FLAGS` | `shared/shared/prompt.py:219-288` | 3439 | 1 |
+<!-- END GENERATED: prompt-part-table -->
 
 The last part is the only one ending in a single newline; the other four end in
 two. That asymmetry is load-bearing for an empty separator, and it is the reason
@@ -213,6 +217,7 @@ directive is chosen from the derived state, not the tier
 
 ### 4.1 The classifier prompt, verbatim
 
+<!-- BEGIN GENERATED: classifier-system-prompt -->
 ```text
 את מסווגת הודעה של מטופלת במרפאת נשים לאחת מארבע קטגוריות. עני במילה אחת בלבד באנגלית: ER או CLARIFY_ER או SOFT או EXPLAIN. בלי הסבר, בלי ניקוד, בלי סימני פיסוק.
 
@@ -280,6 +285,7 @@ directive is chosen from the derived state, not the tier
 בגבול הבטיחות: אם את מתלבטת באמת בין ER ל-CLARIFY_ER — בחרי CLARIFY_ER (שיקוף הדאגה + שאלת הבהרה ממוקדת אחת + ציון סף המיון); פרוטוקול ההבהרה עצמו הוא רשת הבטיחות, לא הורדת דגל. אם את מתלבטת בין CLARIFY_ER ל-SOFT — בחרי CLARIFY_ER. אם את מתלבטת בין SOFT ל-EXPLAIN — בחרי SOFT.
 עני במילה אחת בלבד: ER או CLARIFY_ER או SOFT או EXPLAIN.
 ```
+<!-- END GENERATED: classifier-system-prompt -->
 
 ---
 
@@ -380,6 +386,7 @@ script disagree on that one value, and the script is the stated intent.
 `lib/gali/constants.ts` without a matching change here fails the test, and vice
 versa.
 
+<!-- BEGIN GENERATED: digest-table -->
 | constant | chars | sha256 |
 | -------- | ----- | ------ |
 | `GALI_RAG_PROMPT_TEMPLATE` | 4064 | `000aabf0166d346e64a6e343bc976dcc7467df3b5600cdf36deff8cf2faaeacd` |
@@ -390,6 +397,7 @@ versa.
 | `GALI_SYSTEM_PROMPT_PARTS.formatAndFlags` | 3439 | `ec1efc786bdc8f6469a68e975d3dc5b42624a514982e79e533c57185ae327101` |
 | `GALI_SYSTEM_PROMPT` | 11492 | `3dfa21944aeea8f5816d5737b0a5fc60bb9cfea75cdfbeb7d0b5b5c9aae60e1f` |
 | `GALI_CLASSIFIER_SYSTEM_PROMPT` | 5242 | `ac7362bc02a4d7a2eff10f610ba28827925dc7f6a1e3b1f0c42fbfee2894a095` |
+<!-- END GENERATED: digest-table -->
 
 ---
 
