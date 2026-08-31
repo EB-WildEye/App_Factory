@@ -111,8 +111,9 @@ inference time, where the conflict actually happens.
 
 - `lib/composeSystemPrompt.ts` takes the five parts and returns one string, and it
   emits the precedence text above **when the app's precedence flag is on** — see
-  the amendment below. That text is a named constant in the strings module, not a
-  literal in the function.
+  the amendment below. That text is a named constant, **exported from
+  `lib/composeSystemPrompt.ts` as `PROMPT_PRECEDENCE_TEXT`** — see the second
+  amendment.
 - The `_RULES` part is authored as a list in the create form (add / remove /
   reorder) and joined for the prompt. `composeSystemPrompt` therefore takes
   `string[]` for that one part; the other four are strings.
@@ -180,6 +181,26 @@ Consequences of the flag itself:
 - A default-on flag means the first app created after Gali behaves differently
   from Gali in a way nobody typed. That is the intent, and it needs to be visible
   in the create form rather than implicit.
+
+**Amended 2026-08-31 — the precedence constant lives in `lib/composeSystemPrompt.ts`.**
+
+This ADR originally said the text was "a named constant in the strings module".
+That was written before the strings module existed. `lib/uiStrings.ts` turned out
+to be documented, in its own header, as *"every Hebrew user-facing string in the
+application"* — and the precedence text is neither Hebrew nor user-facing. It is
+prompt content: the model reads it, the creator never sees it, and it is spent
+against the 4096-character budget rather than rendered in a component.
+
+So the constant is `PROMPT_PRECEDENCE_TEXT`, exported from
+`lib/composeSystemPrompt.ts`, module-level, next to the one function that renders
+it. The part of the original consequence that mattered is unchanged and still
+enforced: **it is a named constant, not a literal inside the function.** What
+changed is only which module owns it, and this amendment exists because the ADR
+should describe where the code is rather than where it was once expected to go.
+
+One knock-on worth stating: the text is currently in the ADR's English wording,
+and every app so far is Hebrew RTL. Whether a Hebrew app needs a Hebrew rendering
+of it is queued as `QUESTIONS.md` Q6 and is not settled here.
 
 One further constraint found in the same read, and it is not in the spec or the
 checklist: Gali's live prompt is **not** the five-part composition. See the
