@@ -183,3 +183,21 @@ Options: (a) copy Gali exactly - caller-supplied `session_id` accepted verbatim,
 Recommendation: (b) for new apps, (a) for app #1 unchanged. Read and recorded in `docs/gali-ground-truth.md` §10: the id is a **bearer token with no issuer check** - `/chat` takes it from the request body and uses it verbatim with only `.strip()`, so a caller who learns another session's id can both read that conversation through `/history` and **append turns to it**. It is not enumerable (122 random bits, no listing index, one-day TTL), so the exposure is disclosure rather than guessing - and the id is written to CloudWatch on every turn and echoed in a CORS-exposed `X-Session-ID` header.
 Default taken for now: none, and nothing was redesigned - the task was to record the mechanism. Two findings worth your attention independently of the factory: `/history` is unauthenticated and the production frontend never calls it, so the endpoint that turns a leaked id into a full transcript has no known consumer; and because `/chat` accepts non-UUID ids while `/history` rejects them, a session created with such an id can never be read back.
 
+## Q29 - What is the wire name for digestRecipientEmail
+Blocks: serializing the field. `AppConfig` and the zod schema carry it now; `app/api/appConfigWire.ts` does not.
+Options: (a) `digest_recipient_email`, the snake_case of the TS name per ADR 0008; (b) `recipient_email`, matching Gali's SAM parameter `RecipientEmail`; (c) not in the body at all - the digest is platform concern and the address belongs on the registry row instead.
+Recommendation: (a). 0008 fixes the casing convention and there is no spec artefact to defer to, because the spec has no digest at all. (b) borrows a name from a stack parameter that also carries a sender, which the factory does not put in `AppConfig`.
+Default taken for now: none. The field exists in TypeScript and in the schema, and is absent from `WireAppConfig` - the mapper still carries exactly the four fields that have a wire name, and a test pins that count.
+
+## Q30 - Must digestRecipientEmail be inside a permitted hospital domain
+Blocks: nothing today. Decides whether a creator can send a day of patient conversations to an arbitrary address.
+Options: (a) any well-formed address; (b) an allowlist of domains, configured platform-side; (c) an allowlist of exact addresses.
+Recommendation: (b). The policy says "a secure hospital address", and format validation cannot tell `wolfson.health.gov.il` from `gmail.com`. A typo in the local part bounces; a typo in the domain delivers a day of clinical conversations to a stranger, and deletion follows a confirmed send.
+Default taken for now: (a). `z.email()` validates the format and nothing else, marked BLOCKED in `lib/appConfigSchema.ts` with a pointer here. A domain rule is a data-governance decision, not a format rule.
+
+## Q31 - How long is the chat-history TTL now that deletion follows a confirmed send
+Blocks: ADR 0028's core mechanism, and it is coupled to a promise made to patients.
+Options: (a) leave it at next midnight Asia/Jerusalem; (b) extend it to a few days, long enough that the backstop fires only after the digest has definitively failed and a human has looked; (c) remove the TTL and rely entirely on post-send deletion.
+Recommendation: (b), and the number is yours, not engineering's. (a) defeats the policy - a backstop that fires before the mechanism has run out of chances still destroys unsent conversations, which is exactly today's defect. (c) means a bug in the digest job retains patient data indefinitely, which is worse.
+Default taken for now: none, and nothing was changed. **The reason this is yours: Gali's own disclaimer tells the patient "the conversation is deleted after 24 hours and is not kept in the medical file". Lengthening the TTL without changing that sentence makes the product lie to the patient, and changing it is an ethics-committee matter.**
+

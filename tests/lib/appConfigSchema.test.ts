@@ -20,6 +20,7 @@ import type { AppConfig } from '@/types/appConfig';
 const GALI_CONFIG: AppConfig = {
   appName: 'gali',
   uiTemplate: 'clinic-rtl',
+  digestRecipientEmail: 'gynecology-digest@wolfson.example.gov.il',
   systemPrompt: {
     identity: GALI_SYSTEM_PROMPT_PARTS.identity,
     language: GALI_SYSTEM_PROMPT_PARTS.language,
@@ -34,6 +35,7 @@ const GALI_CONFIG: AppConfig = {
 const REQUIRED_TOP_LEVEL_FIELDS = [
   'appName',
   'uiTemplate',
+  'digestRecipientEmail',
   'systemPrompt',
   'dataFiles',
   'disclaimers',
@@ -100,6 +102,32 @@ describe('appConfigSchema — rejects an empty appName', () => {
     const config = mutableCopy(GALI_CONFIG);
     config.uiTemplate = '';
     expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+});
+
+describe('appConfigSchema — the digest recipient (ADR 0028)', () => {
+  test('a well-formed address is accepted', () => {
+    expect(appConfigSchema.safeParse(GALI_CONFIG).success).toBe(true);
+  });
+
+  test('a malformed address is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.digestRecipientEmail = 'not-an-address';
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('an empty address is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.digestRecipientEmail = '';
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('the field survives validation byte for byte', () => {
+    // The digest is the mechanism conversations leave by, so the address the
+    // creator typed is the address the job must use.
+    expect(parseAppConfig(GALI_CONFIG).digestRecipientEmail).toBe(
+      'gynecology-digest@wolfson.example.gov.il',
+    );
   });
 });
 

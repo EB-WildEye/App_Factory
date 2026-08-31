@@ -14,6 +14,7 @@ import type { AppConfig } from '@/types/appConfig';
 const GALI_CONFIG: AppConfig = {
   appName: 'gali',
   uiTemplate: 'clinic-rtl',
+  digestRecipientEmail: 'gynecology-digest@wolfson.example.gov.il',
   systemPrompt: {
     identity: GALI_SYSTEM_PROMPT_PARTS.identity,
     language: GALI_SYSTEM_PROMPT_PARTS.language,
