@@ -86,6 +86,18 @@ export interface AppConfig {
 
   readonly systemPrompt: AppConfigSystemPrompt;
 
+  /**
+   * Where this app's daily conversation digest is emailed. Per ADR 0028 the digest
+   * is the mechanism by which conversations leave the system, and DynamoDB TTL is
+   * only a backstop — so an app without a recipient has nowhere to send the record
+   * of what it said, and the field is required.
+   *
+   * The TypeScript name is `camelCase` per ADR 0008. **Its wire name is QUEUED**
+   * (Q29): no spec artefact names this field, because the spec has no digest.
+   * `app/api/appConfigWire.ts` therefore does not carry it yet.
+   */
+  readonly digestRecipientEmail: string;
+
   /** BLOCKED BY ADR-0010. See {@link UnresolvedDataFile}. */
   readonly dataFiles: readonly UnresolvedDataFile[];
 

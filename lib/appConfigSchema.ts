@@ -46,6 +46,18 @@ export const appConfigSchema = z.strictObject({
   systemPrompt: appConfigSystemPromptSchema,
 
   /**
+   * ADR 0028. Validated as an email address, which is the one thing about it that
+   * is not a decision — an unsendable recipient means a day of conversations is
+   * never delivered and, because deletion follows a confirmed send, never deleted
+   * either.
+   *
+   * BLOCKED: whether the address must be inside a permitted hospital domain. That
+   * is a data-governance rule, not a format rule, and nobody has stated it — see
+   * `QUESTIONS.md` Q30.
+   */
+  digestRecipientEmail: z.email(),
+
+  /**
    * BLOCKED BY ADR-0010 / ADR-0011. `z.never()` accepts only the empty array, which
    * is what "the element shape is undecided" actually means. A `z.unknown()` here
    * would accept anything and quietly become the contract.
