@@ -61,3 +61,110 @@ Blocks: serializing the field at all. Feeds ADR 0011, which owns format and stor
 Options: (a) `disclaimers` inside the request body, snake_case if it becomes multi-word; (b) not in the body - disclaimers are a KB document, so they arrive as a data file; (c) not in the body - disclaimers are prompt text, so they arrive inside `_FORMAT_AND_FLAGS`.
 Recommendation: hold until 0011. Gali does **both** (b) and (c): an ingested document with `doc_id="disclaimers"`, and frequency rules inside the prompt's format part. If 0011 settles on either lane, this field may not need a wire name at all.
 Default taken for now: absent from `WireAppConfig`. The serializer carries only the four fields that have a wire name, and a test pins that the body has exactly those four keys.
+
+---
+
+Each entry below has a draft ADR carrying the full analysis. The ADR number is
+named; what is here is the two-line version.
+
+## Q10 - ADR 0006: is the backend seven steps or six
+Blocks: nothing in Milestone 1 UI. Blocks 0013's rollback coverage, because a step no count knows about is an orphan nobody deletes.
+Options: (a) seven, and the live-flow lede miscounts by counting F4 twice; (b) six, B7 is outside the sequence because it is TBD; (c) there is a real eighth step, the KB's IAM role.
+Recommendation: (a). The spec's own `FLOW` data contains B1-B7, so (b) requires believing the artefact lists a step the spec does not intend. Decide 0021 first - it is the test of whether (c) is true.
+Default taken for now: none. The checklist keeps B1-B7 and no code depends on the count.
+
+## Q11 - ADR 0010: what structure must a creator supply for a data file
+Blocks: `AppConfig.dataFiles`, Data Center screen 3, and any "ready to create" validation gate. Screens 1 and 2 are not blocked.
+Options: (a) a fixed section list every app must supply; (b) creator-defined sections, validated metadata over free markdown; (c) a fixed core plus optional extras.
+Recommendation: (b), and the answer already exists in production - Gali enforces structure through a validated 9-key metadata record, not through a constrained body. See 0027.
+Default taken for now: none. `dataFiles` is typed `readonly never[]`, so the only assignable value is the empty list and no shape can be assumed by accident.
+
+## Q12 - ADR 0011: what format do disclaimers take, and where are they stored
+Blocks: `AppConfig.disclaimers`, and whatever "creation requirement" turns out to gate.
+Options: (a) prompt text in `_FORMAT_AND_FLAGS`, as `{ text, whenShown }` entries; (b) a markdown file in `kb/`, retrievable; (c) a file outside `kb/`, editable but not ingested; (d) a registry-row attribute.
+Recommendation: (a). Gali does both (a) and (b), and the load-bearing half is the frequency rule - "once per conversation" versus "every time it recurs" cannot be expressed as a bare string, and it is the difference between a sufficient disclaimer and one the patient stops reading.
+Default taken for now: none. `disclaimers` is `readonly never[]` and has no wire name at all (see Q9).
+
+## Q13 - ADR 0012: subdomain record type and certificate
+Blocks: B7 and its rollback. In Milestone 1, only whether the App list shows an address column.
+Options: (a) one ACM wildcard for `*.<factory-domain>` plus a CNAME per app; (b) a certificate per app plus an A/ALIAS record; (c) no subdomain - apps live on a path.
+Recommendation: (a). It keeps B7 a single reversible DNS write, which matters because B7 is the one step 0013 cannot currently describe a rollback for. (b) makes the last step of create slow, asynchronous and revocable.
+Default taken for now: none needed. The spec already says an app works before it has an address, so "no address yet" is built as a normal state either way. What only you can supply: the factory domain, where its DNS is hosted, and whether a wildcard certificate exists.
+
+## Q14 - ADR 0013: who cleans up a partial create, and what are the states called
+Blocks: what the GUI offers on a partial app, and the status vocabulary the mock would otherwise invent.
+Options: (a) the provisioning service unwinds synchronously; (b) the registry row is written first as `pending`, so a partial app is visible by construction; (c) a scheduled sweeper; (d) no automatic rollback - the operator chooses retry or delete.
+Recommendation: (b) for visibility plus (d) for action. Options (a) and (c) both answer "how do we clean up an invisible orphan"; only (b) answers "why is it invisible". Cost: it contradicts the spec, which puts the row at B6.
+Default taken for now: none. The ADR proposes `pending`, `provisioning`, `complete`, `partial`, `failed`; no code uses any of them yet.
+
+## Q15 - ADR 0014: does createApp return 202 or resource ids
+Blocks: the return type of `createApp`, the create form's last screen, and whether the App list polls.
+Options: (a) 202 plus a job handle the GUI polls; (b) 202 with the registry row as the polling target; (c) synchronous, blocking, returning the ids.
+Recommendation: (b), which needs 0013 accepted. (c) is not really available: API Gateway's integration timeout is 29 seconds and B4 is the longest step in the system, so a synchronous create would time out on success, not on failure.
+Default taken for now: none. `services/factoryApi.ts` does not exist yet, so no signature has been committed to.
+
+## Q16 - ADR 0015: the factoryApi route shapes and the normalised error shape
+Blocks: `services/factoryApi.ts` and every route handler under `app/api` - most of Prompt 1.
+Options: (a) implement the surface and record the paths as the contract the backend must satisfy; (b) settle paths first, then implement; (c) implement against the mock only, paths as placeholders.
+Recommendation: (a), which is what ADR 0003 says this milestone is for. The ADR proposes ten routes, adds `getApp` and `deleteFile`, and copies Gali's one-helper error discipline as `{ error, code }`.
+Default taken for now: none - route shapes are a CLAUDE.md Hard Rule 4 stop-and-ask. One correction did land: 0015's claim that per-file re-embedding may be impossible is false for app #1, whose CUSTOM data source upserts per document.
+
+## Q17 - ADR 0018: is Gali an exception, or does the factory reproduce it byte-for-byte
+Blocks: nothing immediately, and quietly conditions every ADR that says "the spec fixes this value". It is the largest open question in the repo.
+Options: (a) Gali stays as it is, the factory composes only for new apps, and app #1 becomes a migration project with its own validation run; (b) the factory composes Gali's prompt too, byte-identical before anything ships; (c) split it - reproduce the table and data source exactly, treat the prompt as the exception.
+Recommendation: none, deliberately - this one is yours. What can be said: the prompt half of (b) is far more expensive than it looks, because Gali's five parts compose to 11,492 characters against a 4096 cap, so it needs a third prompt artefact authored and a clinician re-validation of a frozen system. The table and data-source halves are cheap by comparison.
+Default taken for now: none, and nothing in code assumes an answer. What would settle it: whether a re-validation run of the 380-question set is on the table in this milestone at all.
+
+## Q18 - ADR 0019: the factory's AWS region
+Blocks: bucket-name validation, model-availability checks, and whether region is an `AppConfig` field.
+Options: (a) one region for the whole factory, fixed at `eu-west-1`; (b) a per-app field defaulting to `eu-west-1`; (c) whatever region the stack is deployed to.
+Recommendation: (a). Gali's model ids are region-prefixed inference profiles, so a per-app region makes a creator implicitly choose a model - and if the profile is missing in that region the app provisions cleanly and fails on the first chat request.
+Default taken for now: none. `GALI_REGION` records Gali's region as a fact about app #1, not as a factory decision.
+
+## Q19 - ADR 0020: the KB vector store, and five unverified KB parameters
+Blocks: B4, its rollback, and the largest recurring cost decision in the factory.
+Options: (a) one shared OpenSearch Serverless collection, one index per app; (b) one collection per app; (c) Aurora with pgvector; (d) a managed third-party store.
+Recommendation: (a) - shared is the only option whose cost does not scale linearly with an app count nobody has forecast. The urgent half is not the store though: **the spec's five KB values (hierarchical, parent 500, child 150, `cohere.embed-multilingual-v3`, 1024) appear nowhere in either Gali repo**, so provisioning with them means provisioning a configuration never tested against Gali's corpus.
+Default taken for now: none. All five are listed as not found in `docs/gali-ground-truth.md` and no constant exists for any of them. A five-minute console read of `CHAU7BWP4S` either confirms the spec or invalidates five values it calls fixed for every app.
+
+## Q20 - ADR 0021: how does the KB get read access to each new bucket
+Blocks: B4 - without it, ingestion fails. Also decides whether 0006 is seven steps or eight.
+Options: (a) one shared role with a statement appended per app; (b) one shared role with a naming-prefix wildcard; (c) a role per app; (d) a bucket policy on each new bucket, role fixed.
+Recommendation: (d), with (b)'s prefix as the guard. It keeps the invariant every other step has - a provisioning step writes only resources belonging to its own app - so the IAM work folds into B1, rollback is `delete_bucket`, and the concurrent-create race on a shared policy document disappears.
+Default taken for now: none. Nothing IAM-shaped exists in this repo.
+
+## Q21 - ADR 0022: who increments the prompt version, and when
+Blocks: B3's artefact name, and whether an answer can be traced to the prompt that produced it.
+Options: (a) increment on every write; (b) increment on an explicit publish; (c) content-addressed, `prompt/<sha256>.txt` plus a pointer; (d) no versioning, rely on S3 object versioning.
+Recommendation: (c) for the artefact, (b) for the event. A `v1`/`v2` counter in a bucket has no lock, so two simultaneous publishes either collide or silently overwrite. Worth knowing: the version has to be recorded on the conversation turn or none of this achieves its stated purpose, and Gali's turns expire at the next midnight anyway.
+Default taken for now: none. Gali has no versioned prompt artefact at all, so accepting this makes app #1 the first thing that would change - which routes straight back into Q17.
+
+## Q22 - ADR 0023: what are the valid uiTemplate values
+Blocks: the create form's first field and its validation.
+Options: (a) a closed union of built template ids, validated as an enum; (b) a free string with a render-time fallback; (c) a template registry fetched from the backend.
+Recommendation: (a), starting with exactly one member. (b) moves the failure from the form, where the creator is present and can fix it, to render time, where the person affected is a patient - an app that looks right in the registry and renders as something else.
+Default taken for now: `z.string().min(1)`, marked BLOCKED. `clinic-rtl` appears in both spec examples and nowhere in either Gali repo, so it has not been adopted as a constant. Renaming a template later is a data migration, because the id lands in every registry row.
+
+## Q23 - ADR 0024: the admin authentication model
+Blocks: where the middleware seam goes. Not the implementation - that is out of scope this milestone.
+Options: (a) a shared secret or basic auth at the middleware; (b) an OIDC provider with a session cookie; (c) network-level only, VPN or IP allowlist; (d) two roles, editor and admin.
+Recommendation: (b) for mechanism plus (d) for model, with only the seam built now. If the factory can edit the knowledge base of a validated medical assistant then "who changed this file" needs an answer, and a shared secret cannot produce one - every action is attributable to everyone.
+Default taken for now: none - no middleware file exists yet. Flagged separately, not for this ADR: Gali's own `/chat` and `/history` endpoints have no authorizer at all.
+
+## Q24 - ADR 0025: appName validation, and the fact that it is permanent
+Blocks: the create form's first field, its validation, and its help text.
+Options: (a) `appName` is the bucket name verbatim, validated against the full S3 rule; (b) `appName` is a slug and the bucket name is derived, as Gali already does; (c) verbatim plus a pre-flight availability check.
+Recommendation: (b). Under (a) an unrelated stranger's bucket named `gali` blocks that app name permanently, and the failure arrives at B1 rather than in the form. Gali's own bucket is `gali-documents-${StackName}-${AccountId}` - app #1 already solved this.
+Default taken for now: `z.string().min(1)`, marked BLOCKED. **Independent of which option wins: the create form has to say the name can never be changed.** It is both the S3 bucket name and the DynamoDB partition key (0007), and neither can be renamed. A permanent field that does not say so is a trap.
+
+## Q25 - ADR 0026: what does deleting a partial app do
+Blocks: the delete confirmation copy and `deleteApp`'s return type.
+Options: (a) delete what exists, confirmation generated from real state, per-resource outcome returned; (b) keep the fixed four-resource confirmation and treat absent resources as successes; (c) refuse to delete a partial app until it completes; (d) two operations, delete and abandon.
+Recommendation: (a). The confirmation exists to make the operator's model match reality before something irreversible; a dialog listing resources that do not exist teaches them the list is boilerplate, which is exactly what makes the type-the-name safeguard useless. (c) makes an unfinishable app permanently undeletable.
+Default taken for now: none. Worth deciding alongside it: the chat table holds patient conversations, and unlike Gali's `Retain` policy an SDK-created table has no protection at all.
+
+## Q26 - ADR 0027: the per-document KB metadata schema
+Blocks: 0010, and therefore `dataFiles`.
+Options: (a) adopt Gali's 9 keys as the factory schema; (b) a generic five-key core plus a per-app extension; (c) copy all 9 verbatim including the two hard-coded values; (d) no metadata schema.
+Recommendation: (b). `gestational_age_max_weeks` is not a property of documents in general - a factory whose universal schema carries a gestational-age field has decided what kind of app it hosts. (c) is defensible if that is the honest answer, and that is your call to make.
+Default taken for now: none. The full 9-key schema and its validation rules are copied into `lib/gali/constants.ts` as a record of app #1. The question inside the question: **who may set the clinical booleans** - a creator who sets `contains_red_flags: false` on a haemorrhage document has made a safety error no schema can catch.

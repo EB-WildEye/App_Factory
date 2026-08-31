@@ -1,7 +1,8 @@
 # 0006 — Backend step count: seven or six
 
-Status: open
+Status: DRAFT — not accepted. EB decides.
 Date: 2026-08-23
+Recommendation added: 2026-08-31
 
 ## Context
 
@@ -62,16 +63,42 @@ knows about. But two things follow from it that are not miscounts:
    role the Bedrock KB needs to read the bucket, or the vector-store index
    creation implied by B4.
 
+## Recommendation
+
+**Option 1 — seven backend steps, and the lede is a miscount.** With two riders,
+because the interesting part of this ADR is not the arithmetic.
+
+The evidence is one-sided. The spec's own `FLOW` data contains B1–B7, so seven
+steps exist in the artefact; the lede reaches eleven only by counting F4 in the
+frontend lane *and* as the handoff. Option 2 would require believing that the
+`FLOW` data lists a step the spec does not intend, which is a stranger claim than
+a wrong sentence.
+
+Rider 1 — **option 3 is not disposed of, it is deferred to 0021.** The candidate
+eighth step is the IAM role the Bedrock KB needs to read a new bucket. That role
+is required for ingestion to work at all and it appears in no count, no card and
+no flow station. If 0021 concludes the factory must create a role or policy per
+app, the count is eight and this ADR has to be reopened. So: accept seven now,
+and treat 0021 as the test of whether seven is final.
+
+Rider 2 — **fix B3's rollback wording while the count is being settled.** B3
+writes `prompt/v1.txt` and appears in no registry row, so it is the step most
+likely to be left out of a "resources to delete" list. It is only covered today
+because B1's rollback empties the whole bucket. State that explicitly — *B1's
+compensating action empties the bucket, not just the keys B2 wrote* — or B3
+becomes an orphan the moment someone optimises the delete path.
+
 ## Decision
 
-Open. Not resolved here.
-
-## Reasoning
-
-Pending.
+Open — DRAFT. Awaiting EB.
 
 ## Consequences
 
-Pending. Whatever is chosen, the count must be stated in exactly one place and
-the rollback table above must cover every step in it — a resource-creating step
-that no count knows about is an orphan nobody deletes.
+The count must be stated in exactly one place and the rollback table above must
+cover every step in it — a resource-creating step that no count knows about is an
+orphan nobody deletes.
+
+If the recommendation is accepted: the checklist's step table stays at B1–B7, the
+spec's live-flow lede is recorded as a known error rather than a second opinion,
+and 0013's rollback work has seven compensating actions to cover, not six. If
+0021 later adds an IAM step, both this ADR and 0013 change together.

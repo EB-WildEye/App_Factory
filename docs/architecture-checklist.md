@@ -43,9 +43,9 @@ below carry `settled` or `gali` where that changed the status.
 | R2 | `kb/` prefix in the bucket | One markdown file per data section, e.g. `kb/prep.md`. The Data Source points here. | `spec` |
 | R3 | `prompt/v1.txt` in the bucket | The composed system prompt, saved **as a version**, so you can tell which prompt produced a given answer. | `spec` |
 | R4 | Bedrock Knowledge Base | chunking `hierarchical`; parent `500` tokens; child `150` tokens; embeddings `cohere.embed-multilingual-v3`; dimensions `1024`. Fixed for every app. | `spec` |
-| R5 | Bedrock Data Source | `source = s3://<app>/kb/` | `gali` — **Gali's KB uses a CUSTOM data source, not S3.** Markdown is pushed with `IngestKnowledgeBaseDocuments` (`scripts/ingest_kb.py`). The spec describes a mechanism app #1 does not use. |
-| R6 | Ingestion job | Turns files into vectors. The longest step. Asynchronous. | `gali` — CUSTOM ingest is a per-document upsert keyed on document id, not a data-source-wide job. Changes `E8` feasibility. |
-| R7 | DynamoDB chat-history table | name `<app>-chat`; key `session_id`, generated client-side; TTL attribute `expires_at`, 24h. No user accounts. | `gali` — every detail but the client-generated key differs in production: name `gali-sessions-${Stage}`, **composite** key `session_id` HASH + `timestamp` RANGE, TTL attribute **`ttl`**, expiring at next midnight Israel time rather than rolling 24h. |
+| R5 | Bedrock Data Source | `source = s3://<app>/kb/` | `gali` — **Gali's KB uses a CUSTOM data source, not S3.** Markdown is pushed with `IngestKnowledgeBaseDocuments` (`scripts/ingest_kb.py`). The spec describes a mechanism app #1 does not use. → **0018**. Data source id `PPIUPPCKNN`; a second id `FDN4IETFFW` reaches the sync Lambda — see QUESTIONS.md Q1. |
+| R6 | Ingestion job | Turns files into vectors. The longest step. Asynchronous. | `gali` — CUSTOM ingest is a per-document upsert keyed on document id, not a data-source-wide job. Changes `E8` feasibility, and **resolves it**: per-document upsert makes per-file re-embedding achievable. → **0018**. |
+| R7 | DynamoDB chat-history table | name `<app>-chat`; key `session_id`, generated client-side; TTL attribute `expires_at`, 24h. No user accounts. | `gali` — every detail but the client-generated key differs in production: name `gali-sessions-${Stage}`, **composite** key `session_id` HASH + `timestamp` RANGE, TTL attribute **`ttl`**, expiring at next midnight Israel time rather than rolling 24h. Sort key `timestamp = 0` is reserved for the Bedrock session pointer. → **0018**. |
 | R8 | Subdomain | `<app>.<factory-domain>`, probably CNAME → app endpoint. Last step. | `TBD` → 0012 |
 | R9 | Certificate | Issuer and mechanism undecided. | `TBD` → 0012 |
 
@@ -114,7 +114,7 @@ Order is identical in both sources and is the one thing not in dispute.
 | S6 | join order | `composeSystemPrompt` | Identity → language → voice → rules → format. Fixed. One module only. | `spec` `M1`, confirmed `gali` (`prompt.py:293`) |
 | S7 | separator | — | What joins the parts. | `gali` — **the empty string.** `SYSTEM_PROMPT = _IDENTITY + _LANGUAGE + _VOICE + _RULES + _FORMAT_AND_FLAGS`; each part carries its own trailing `\n\n`. Recorded in 0009. |
 | S8 | prompt versioning | — | `prompt/v1.txt` implies v2, v3. Who increments, and when, is never stated. | `gap` — and Gali has no versioned prompt artefact at all; the prompt is a Python literal in the Lambda layer, versioned by git. |
-| S9 | the composed prompt is not the live prompt | — | `gali` — Gali's five-part `SYSTEM_PROMPT` is documentation. Production sends `RAG_PROMPT_TEMPLATE`, a separately hand-written condensed string, **hard-capped by Bedrock at 4096 characters** and required to contain `$search_results$`. The spec's central claim — *"the system prompt is assembled, not written"* — is not true of app #1. | `gali`, **needs a decision** |
+| S9 | the composed prompt is not the live prompt | — | `gali` — Gali's five-part `SYSTEM_PROMPT` is documentation. Production sends `RAG_PROMPT_TEMPLATE`, a separately hand-written condensed string, **hard-capped by Bedrock at 4096 characters** and required to contain `$search_results$`. The spec's central claim — *"the system prompt is assembled, not written"* — is not true of app #1. | `gali` → **0018** |
 
 ## 8. Named fields — factory registry row
 
@@ -196,15 +196,15 @@ Order is identical in both sources and is the one thing not in dispute.
 
 | # | Item | Why it matters |
 | - | ---- | -------------- |
-| N1 | Region (`P3`) | Answered by Gali: `eu-west-1` throughout. Still needs stating as a factory decision, since bucket names and endpoints depend on it. |
-| N2 | KB vector store (`P4`) | A Bedrock KB cannot exist without one. Affects B4 rollback and cost. Gali cannot answer it — its KB predates the repo. |
-| N3 | IAM role, KB → S3 (`P5`) | Required for ingestion. Candidate missing step in 0006. |
+| N1 | Region (`P3`) | Answered by Gali: `eu-west-1` throughout. Still needs stating as a factory decision, since bucket names and endpoints depend on it. **Drafted as 0019.** |
+| N2 | KB vector store (`P4`) | A Bedrock KB cannot exist without one. Affects B4 rollback and cost. Gali cannot answer it — its KB predates the repo. **Drafted as 0020**, which also records that all five of the spec's KB chunking and embedding values are absent from both Gali repos. |
+| N3 | IAM role, KB → S3 (`P5`) | Required for ingestion. Candidate missing step in 0006. **Drafted as 0021**, which recommends a bucket policy so no eighth step is needed. |
 | N4 | Prompt part separator (`S7`) | Answered by Gali: the empty string. Recorded in 0009. |
-| N5 | Prompt version increment policy (`S8`) | `prompt/v1.txt` implies successors. Gali has no versioned prompt artefact. |
-| N6 | Valid `ui_template` values (`A2`) | The create form's first field is a choice from a set nobody has enumerated. |
-| N7 | Admin auth model (`P6`) | Seam only this milestone, but the model decides where the seam goes. |
-| N8 | S3 bucket naming constraints | Bucket names are globally unique, lowercase, DNS-safe. `appName` is used verbatim as the bucket name, so `appName` validation in the zod schema is really S3 naming law, and a name collision is a create failure nobody has assigned an error message to. |
-| N9 | Delete semantics for a partial app | The delete confirmation names four resources. A partial app has fewer than four. |
-| N10 | Per-document KB metadata schema | `gali` — Gali validates every KB document against a required 9-key schema before any network call: `doc_type`, `procedure_type`, `gestational_age_max_weeks` (optional), `topic_tags` (1–10 non-empty strings), `contains_red_flags`, `contains_emotional_support`, `language`, `source`, `version`. This is the real answer to *"a defined structure, not free text"* and it is absent from the spec and from `AppConfig`. Feeds 0010. |
+| N5 | Prompt version increment policy (`S8`) | `prompt/v1.txt` implies successors. Gali has no versioned prompt artefact. **Drafted as 0022.** |
+| N6 | Valid `ui_template` values (`A2`) | The create form's first field is a choice from a set nobody has enumerated. **Drafted as 0023.** |
+| N7 | Admin auth model (`P6`) | Seam only this milestone, but the model decides where the seam goes. **Drafted as 0024.** |
+| N8 | S3 bucket naming constraints | Bucket names are globally unique, lowercase, DNS-safe. `appName` is used verbatim as the bucket name, so `appName` validation in the zod schema is really S3 naming law, and a name collision is a create failure nobody has assigned an error message to. **Drafted as 0025**, coupled to 0007: `appName` is the bucket name AND the DynamoDB partition key, so the create form's first field is validated by S3 naming law and is permanently immutable. |
+| N9 | Delete semantics for a partial app | The delete confirmation names four resources. A partial app has fewer than four. **Drafted as 0026.** |
+| N10 | Per-document KB metadata schema | `gali` — Gali validates every KB document against a required 9-key schema before any network call: `doc_type`, `procedure_type`, `gestational_age_max_weeks` (optional), `topic_tags` (1–10 non-empty strings), `contains_red_flags`, `contains_emotional_support`, `language`, `source`, `version`. This is the real answer to *"a defined structure, not free text"* and it is absent from the spec and from `AppConfig`. Feeds 0010. **Drafted as 0027**, and it feeds 0010. Copied verbatim into `lib/gali/constants.ts`. |
 | N11 | The 4096-character prompt cap (`S9`) | **Settled by 0016.** A hard Bedrock limit on the RetrieveAndGenerate prompt template. `composeSystemPrompt` validates and fails; the create form counts and blocks. See `U16`. |
 | N12 | Disclaimers already exist in Gali, twice | `gali` — as `data/Disclaimers 210626.md`, an ingested KB document with `doc_id="disclaimers"`, **and** as prompt text with frequency rules in `_FORMAT_AND_FLAGS`. Both lanes, which is a data point for 0011, not a decision. |
