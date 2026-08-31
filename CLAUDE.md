@@ -76,6 +76,24 @@ How to use it:
 - An ADR with `Status: open` blocks the code that depends on it. Build
   everything that does not depend on it, and say what is blocked.
 
+## SHELL AND PATHS
+
+Binding. Both rules exist because both were broken once.
+
+1. **Every git command uses `git -C <absolute-path>`. `cd` is never used, in any
+   command, compound or otherwise.** A shell's working directory survives across a
+   compound command and can survive into the next one, so a `cd` that looked
+   scoped is how a command aimed at this repo lands in another. That is not
+   hypothetical: on 2026-08-30 a `cd` into `Gali-frontend` earlier in the same
+   command line caused a `git checkout -b` to create a branch inside a read-only
+   repo. `Bash(cd *)` is in the deny list of `.claude/settings.json`, so this rule
+   is enforced by the harness and not only by good intentions.
+2. **Gali paths appear only in read commands.** Never `write`, `edit`, `stage` or
+   `commit` under either Gali path — and "read" excludes anything that mutates
+   `.git`, which is why `git status` and `git diff` are also out (they refresh the
+   index). Use `git log`, `git show`, `git cat-file`, `git diff-tree`. Copying
+   source *out* of Gali into this repo is expected and permitted.
+
 ## GIT
 
 Binding. Stricter than the global working rules where the two overlap; nothing
@@ -95,6 +113,13 @@ here contradicts them.
    subject.
 5. **Never force-push. Never rewrite history that has been pushed. Never amend a
    commit I have already seen.**
+6. **A commit's unit is a capability gained, not a file touched.** If a change
+   needs three files to do anything at all, those three files are one commit. The
+   test: after this commit, can the repo do something it could not do before? If
+   the answer is "not until the next commit lands", the split is wrong. `54987d7`
+   is the counter-example — it added the ESLint dependency and stopped, so the
+   repo carried a linter it could not run until `07258cc` supplied the config and
+   the script.
 
 ## CODE CONVENTIONS
 
