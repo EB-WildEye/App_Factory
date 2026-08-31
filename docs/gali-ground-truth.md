@@ -1,9 +1,14 @@
 # Gali ground truth
 
-What production Gali actually is, read out of the two read-only repos on
-2026-08-30. Every value here is a **constant to be copied, never a value to be
-chosen**. Where the repos are silent, this document says so instead of filling
-the gap — see [What is not in the Gali repos](#what-is-not-in-the-gali-repos).
+What production Gali actually is. Every value here is a **constant to be copied,
+never a value to be chosen**. Where a source is silent, this document says so
+instead of filling the gap — see
+[What is not in the Gali repos](#what-is-not-in-the-gali-repos).
+
+Two sources, because one was not enough. Sections 1-8 are read out of the two
+read-only repos (2026-08-30). **Section 9 is read out of AWS (2026-08-31)**, and it
+exists because Gali's Knowledge Base was created by hand in the console, so its
+configuration is in no repo at all.
 
 | repo | path | commit |
 | ---- | ---- | ------ |
@@ -401,26 +406,156 @@ versa.
 
 ---
 
+## 9. Read from AWS, not from the repos
+
+Gali's Knowledge Base was created by hand in the console, so none of its
+configuration is in either repo. It is all readable from the API. Read
+**2026-08-31**, account `973938718804`, region `eu-west-1`, identity
+`arn:aws:iam::973938718804:user/enbar.gali`.
+
+Commands, so any of this can be re-checked:
+
+```bash
+aws bedrock-agent get-knowledge-base  --knowledge-base-id CHAU7BWP4S --region eu-west-1
+aws bedrock-agent list-data-sources   --knowledge-base-id CHAU7BWP4S --region eu-west-1
+aws bedrock-agent get-data-source     --knowledge-base-id CHAU7BWP4S --data-source-id PPIUPPCKNN --region eu-west-1
+aws s3vectors get-index --vector-bucket-name bedrock-knowledge-base-ib3awf \
+                        --index-name bedrock-knowledge-base-default-index --region eu-west-1
+aws iam get-role --role-name AmazonBedrockExecutionRoleForKnowledgeBase_dvica
+```
+
+### 9.1 The five values the spec calls fixed — all five confirmed
+
+The architecture spec states five KB parameters as fixed for every app. Every one
+of them is what production actually runs.
+
+| # | spec says | AWS says | verdict |
+| - | --------- | -------- | ------- |
+| 1 | chunking `hierarchical` | `chunkingStrategy: HIERARCHICAL` | **confirms** |
+| 2 | parent `500` tokens | `levelConfigurations[0].maxTokens: 500` | **confirms** |
+| 3 | child `150` tokens | `levelConfigurations[1].maxTokens: 150` | **confirms** |
+| 4 | embeddings `cohere.embed-multilingual-v3` | `arn:aws:bedrock:eu-west-1::foundation-model/cohere.embed-multilingual-v3` | **confirms** |
+| 5 | dimensions `1024` | S3 Vectors index `dimension: 1024` | **confirms** |
+
+One qualification on #5, because it changes where the value lives rather than
+whether it is right. `get-knowledge-base` returns **no** dimension field: the
+`embeddingModelConfiguration` carries only `embeddingDataType: FLOAT32`. The 1024
+is a property of the **vector index**, not of the KB. So the spec's number is
+correct and its placement is not — for this embedding model the factory does not
+set a dimension on the KB, it creates an index of that dimension and the KB
+inherits it. A factory that tries to pass `dimensions: 1024` to
+`CreateKnowledgeBase` is passing it to the wrong call.
+
+### 9.2 What the spec got wrong, and what it never mentioned
+
+| # | item | AWS says | verdict |
+| - | ---- | -------- | ------- |
+| 6 | data source type — spec: S3 at `s3://<app>/kb/` | `dataSourceConfiguration.type: CUSTOM` | **contradicts** |
+| 7 | vector store — spec: silent | `storageConfiguration.type: S3_VECTORS` | **spec silent, and no ADR guessed it** |
+| 8 | chunk overlap — spec: silent | `overlapTokens: 30` | **spec silent** |
+| 9 | distance metric — spec: silent | `distanceMetric: euclidean` | **spec silent** |
+| 10 | embedding data type — spec: silent | `FLOAT32` / index `float32` | **spec silent** |
+| 11 | data deletion policy — spec: silent | `dataDeletionPolicy: DELETE` | **spec silent** |
+
+Rows 7 and 9 are the two that matter.
+
+**S3 Vectors.** The vector store is `S3_VECTORS` — index
+`arn:aws:s3vectors:eu-west-1:973938718804:bucket/bedrock-knowledge-base-ib3awf/index/bedrock-knowledge-base-default-index`,
+in vector bucket `bedrock-knowledge-base-ib3awf`, both created 2026-04-19,
+`AES256`. Draft ADR 0020 offered four options — shared OpenSearch Serverless,
+per-app OpenSearch Serverless, Aurora pgvector, a managed third party — and the
+real answer is none of them. That matters beyond being wrong: 0020's whole cost
+argument was built on OpenSearch Serverless having a minimum billed capacity per
+collection, and S3 Vectors has no such floor. The recommendation in 0020 has been
+amended accordingly.
+
+**Euclidean, not cosine.** `distanceMetric: euclidean`. Nothing in the spec, the
+build plan or any ADR mentions a distance metric, and cosine is the more common
+default for text embeddings. A factory that creates its indexes with cosine
+would be retrieving differently from app #1 on identical vectors — a silent
+answer-quality difference, not an error. This is now checklist row `N14`.
+
+### 9.3 The KB service role, as it actually is
+
+`AmazonBedrockExecutionRoleForKnowledgeBase_dvica`, created 2026-04-19, last used
+2026-08-31 in `eu-west-1`. No inline policies; two attached customer policies.
+
+Trust policy — `bedrock.amazonaws.com`, with both confused-deputy conditions
+present:
+
+```json
+{ "Condition": {
+    "StringEquals": { "aws:SourceAccount": "973938718804" },
+    "ArnLike": { "aws:SourceArn": "arn:aws:bedrock:eu-west-1:973938718804:knowledge-base/*" } } }
+```
+
+`AmazonBedrockS3VectorStorePolicyForKnowledgeBase_dvica` — five actions, scoped to
+the one index ARN, conditioned on `aws:ResourceAccount`:
+
+```
+s3vectors:GetIndex  QueryVectors  PutVectors  GetVectors  DeleteVectors
+```
+
+`AmazonBedrockFoundationModelPolicyForKnowledgeBase_dvica` —
+`bedrock:InvokeModel` on the cohere model ARN only, plus
+`aws-marketplace:Subscribe|ViewSubscriptions|Unsubscribe` conditioned on
+`aws:CalledViaLast = bedrock.amazonaws.com`.
+
+**There is no `s3:GetObject` and no `s3:ListBucket` anywhere in this role.** That
+is not an omission — a CUSTOM data source is pushed to, so the KB never reads S3.
+An S3 data source, which is what the spec describes and what draft ADR 0021 was
+written about, needs both. So 0021's question is real for the factory and simply
+does not arise for app #1.
+
+### 9.4 The second data source id does not exist
+
+Recorded as a read, not acted on — which door Gali production uses is being
+investigated elsewhere.
+
+- `list-data-sources` on `CHAU7BWP4S` returns **exactly one**: `PPIUPPCKNN`, name
+  `md-files-22-06-26`, `AVAILABLE`, created 2026-06-22, updated 2026-06-28.
+- `get-data-source` for `FDN4IETFFW` returns
+  `ResourceNotFoundException: DataSource with id FDN4IETFFW is not found`.
+- `list-knowledge-bases` in `eu-west-1` returns **exactly one** KB, so
+  `FDN4IETFFW` is not a data source on some other knowledge base either.
+
+`FDN4IETFFW` is the value `samconfig.toml:10` passes as `DataSourceId` to the sync
+Lambda. See `QUESTIONS.md` Q1; no change has been made anywhere on the strength of
+this read.
+
+---
+
 ## What is not in the Gali repos
 
 Listed as **not found** rather than inferred. Each is a real gap for the
 factory, and the ones with an ADR number are queued in `QUESTIONS.md`.
 
+**Items 1-8 were closed on 2026-08-31 by reading AWS — see §9.** They were never
+in the repos and never will be; the KB was built in the console. They are kept
+here, marked, so the record shows what was unknown and how it stopped being
+unknown.
+
 | # | asked for | status | what the repos do say |
 | - | --------- | ------ | --------------------- |
-| 1 | KB chunking strategy (`hierarchical`) | **not found** | no chunking configuration anywhere in the repo. `ARCHITECTURE.md:49` says only "Bedrock Knowledge Base (managed embeddings)". |
-| 2 | parent chunk size `500` tokens | **not found** | same |
-| 3 | child chunk size `150` tokens | **not found** | same |
-| 4 | embedding model (`cohere.embed-multilingual-v3`) | **not found** | no embedding model id appears in any file outside `.venv/`. The spec's values are the spec's, not Gali's. |
-| 5 | embedding dimensions (`1024`) | **not found** | same |
-| 6 | KB vector store (OpenSearch / Aurora / Pinecone) | **not found** | `ARCHITECTURE.md:88` names "vector store + embeddings" as one opaque box. The KB is a SAM **parameter**, created outside the stack, so none of its internals are in the repo. |
-| 7 | the KB's own data-access IAM role | **not found** | the template grants the *sync Lambda* `StartIngestionJob` + bucket read (`template.yaml:243-259`). The role the KB itself assumes is outside the stack. |
-| 8 | which of the two data source ids is current | **not found** | both are used, by different code paths; see §5. |
+| 1 | KB chunking strategy (`hierarchical`) | **closed — §9, confirms spec** | no chunking configuration anywhere in the repo. `ARCHITECTURE.md:49` says only "Bedrock Knowledge Base (managed embeddings)". |
+| 2 | parent chunk size `500` tokens | **closed — §9, confirms spec** | same |
+| 3 | child chunk size `150` tokens | **closed — §9, confirms spec** | same |
+| 4 | embedding model (`cohere.embed-multilingual-v3`) | **closed — §9, confirms spec** | no embedding model id appears in any file outside `.venv/`. The spec's values are the spec's, not Gali's. |
+| 5 | embedding dimensions (`1024`) | **closed — §9, confirms spec** | same |
+| 6 | KB vector store (OpenSearch / Aurora / Pinecone) | **closed — §9, `S3_VECTORS`** | `ARCHITECTURE.md:88` names "vector store + embeddings" as one opaque box. The KB is a SAM **parameter**, created outside the stack, so none of its internals are in the repo. |
+| 7 | the KB's own data-access IAM role | **closed — §9.3** | the template grants the *sync Lambda* `StartIngestionJob` + bucket read (`template.yaml:243-259`). The role the KB itself assumes is outside the stack. |
+| 8 | which of the two data source ids is current | **closed — §9.4** | both are used, by different code paths; see §5. |
 | 9 | prompt version increment policy | **not found** | there is no versioned prompt artefact at all. The prompt is a Python literal in the shared Lambda layer, versioned by git. |
 | 10 | the S3 `kb/` and `prompt/v1.txt` layout the spec describes | **not found** | the bucket is `gali-documents-${AWS::StackName}-${AWS::AccountId}` (`template.yaml:112`) and the watched prefix is `documents/`, not `kb/` (`template.yaml:270`). No `prompt/` prefix exists. |
 
-Items 1-5 are the sharpest finding here. The architecture spec states those five
-values as fixed for every app, and **none of them can be confirmed against app
-#1**, because app #1's KB was created outside the repo. Any factory that
-provisions a KB with those parameters is provisioning something that has never
-been validated against Gali's corpus.
+Items 1-5 were the sharpest finding here while they were open: the spec stated
+five values as fixed for every app and not one could be confirmed against app #1.
+They are now confirmed, all five, by reading the KB itself — see §9.1. The residue
+is smaller and different: the spec is right about the five values it names and
+silent about four more that production also sets (overlap 30, distance metric
+euclidean, `FLOAT32`, deletion policy `DELETE`), and wrong about the data source
+type. A factory built from the spec alone would get the chunking and the
+embeddings right and the retrieval geometry wrong.
+
+Items 9 and 10 remain genuinely open. Neither is answerable from AWS: item 9 is a
+policy question (0022) and item 10 describes a bucket layout app #1 does not use.

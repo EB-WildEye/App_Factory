@@ -12,13 +12,15 @@ file carries the ask. Where both exist the ADR number is named.
 Blocks: the factory's data-source contract, and `E8` per-file re-embedding. Nothing in Milestone 1 UI, but no provisioning step can be specified until it is settled.
 Options: (a) two data sources exist on KB CHAU7BWP4S, one CUSTOM (PPIUPPCKNN) and one S3 (FDN4IETFFW), both live; (b) FDN4IETFFW is stale config left over from the S3-sync era and the sync Lambda is dead code; (c) PPIUPPCKNN is stale and the scripts have not been run since.
 Recommendation: (a), and confirm it in the console. `scripts/ingest_kb.py` and `scripts/kb_verify_reconstruct.py` both target PPIUPPCKNN as CUSTOM, and the sync Lambda is still deployed and wired to S3 uploads under `documents/`, so both paths look alive.
-Default taken for now: none. Both ids are recorded side by side in `lib/gali/constants.ts` as `GALI_CUSTOM_DATA_SOURCE_ID` and `GALI_SYNC_DATA_SOURCE_ID`, with the discrepancy stated in `docs/gali-ground-truth.md` §5. No code picks one.
+Read 2026-08-31, recorded and NOT acted on (you said this is being investigated elsewhere): `list-data-sources` on `CHAU7BWP4S` returns exactly one data source, `PPIUPPCKNN`; `get-data-source FDN4IETFFW` returns `ResourceNotFoundException`; and `list-knowledge-bases` returns exactly one KB in `eu-west-1`, so `FDN4IETFFW` is not a data source on some other KB either. That is evidence for option (b), not a decision. See `docs/gali-ground-truth.md` §9.4.
+Default taken for now: none. Both ids stay recorded side by side in `lib/gali/constants.ts` as `GALI_CUSTOM_DATA_SOURCE_ID` and `GALI_SYNC_DATA_SOURCE_ID`. No code picks one, and nothing was changed on the strength of the read.
 
-## Q2 - The spec's five KB chunking/embedding values cannot be confirmed against Gali
+## Q2 - The spec's five KB chunking/embedding values cannot be confirmed against Gali — ANSWERED 2026-08-31 by reading AWS: all five confirmed
 Blocks: the KB provisioning step, and the claim that generic-Gali reproduces Gali. Not Milestone 1 UI.
 Options: (a) treat the spec's values (hierarchical, parent 500, child 150, cohere.embed-multilingual-v3, 1024) as the factory standard and accept that app #1's KB may differ; (b) read the real values off KB CHAU7BWP4S in the console and make those the standard; (c) leave the KB out of the factory contract until the console read happens.
 Recommendation: (b) before any provisioning code exists. The spec states five values as fixed for every app; none of them appears anywhere in the Gali repos, because the KB was created outside the stack. Provisioning a KB with unverified parameters means app #1's validated corpus was never tested against the configuration the factory would create.
-Default taken for now: none. All five are listed as **not found** in `docs/gali-ground-truth.md`, and no constant for any of them exists in `lib/gali/constants.ts`.
+Resolved by (b). Read from KB `CHAU7BWP4S` on 2026-08-31: `HIERARCHICAL`, parent 500, child 150, `cohere.embed-multilingual-v3`, index dimension 1024 — **all five confirm the spec**. Recorded with the exact commands in `docs/gali-ground-truth.md` §9.
+What the read added, which nobody had asked for: four parameters production sets and the spec never mentions — `overlapTokens: 30`, `distanceMetric: euclidean`, `FLOAT32`, `dataDeletionPolicy: DELETE` — plus one placement correction, that 1024 belongs to the vector index and not to the KB. The two that change behaviour are now checklist `N13` and `N14`, and they are the subject of Q27.
 
 ## Q3 - Should the Gali constants have a committed regeneration script — ANSWERED 2026-08-31: yes, (a)
 Blocks: nothing. Re-copying constants after a Gali change was a manual read.
@@ -121,11 +123,11 @@ Options: (a) one region for the whole factory, fixed at `eu-west-1`; (b) a per-a
 Recommendation: (a). Gali's model ids are region-prefixed inference profiles, so a per-app region makes a creator implicitly choose a model - and if the profile is missing in that region the app provisions cleanly and fails on the first chat request.
 Default taken for now: none. `GALI_REGION` records Gali's region as a fact about app #1, not as a factory decision.
 
-## Q19 - ADR 0020: the KB vector store, and five unverified KB parameters
-Blocks: B4, its rollback, and the largest recurring cost decision in the factory.
-Options: (a) one shared OpenSearch Serverless collection, one index per app; (b) one collection per app; (c) Aurora with pgvector; (d) a managed third-party store.
-Recommendation: (a) - shared is the only option whose cost does not scale linearly with an app count nobody has forecast. The urgent half is not the store though: **the spec's five KB values (hierarchical, parent 500, child 150, `cohere.embed-multilingual-v3`, 1024) appear nowhere in either Gali repo**, so provisioning with them means provisioning a configuration never tested against Gali's corpus.
-Default taken for now: none. All five are listed as not found in `docs/gali-ground-truth.md` and no constant exists for any of them. A five-minute console read of `CHAU7BWP4S` either confirms the spec or invalidates five values it calls fixed for every app.
+## Q19 - ADR 0020: the KB vector store — REFRAMED 2026-08-31 by reading AWS
+Blocks: B4 and its rollback. No longer the largest cost decision in the factory, because the store turned out to have no capacity floor.
+Options, as they now stand: (a) one shared S3 Vectors index for all apps, separated by metadata filter; (b) one S3 Vectors index per app.
+Recommendation: (b), which reverses what this ADR originally recommended. The read killed the argument for sharing: the store is **`S3_VECTORS`**, not OpenSearch Serverless, and S3 Vectors has no minimum billed capacity — so per-app isolation, per-app deletion at teardown, and not having to get a metadata filter right all become nearly free. The four options the ADR originally weighed (shared OpenSearch, per-app OpenSearch, Aurora pgvector, third party) were the wrong four.
+Default taken for now: none. ADR 0020 carries the amendment and the withdrawn recommendation. One thing AWS cannot answer and that could push this back to (a): whether a single vector bucket has a per-bucket index quota. That is a limits question for the console or support.
 
 ## Q20 - ADR 0021: how does the KB get read access to each new bucket
 Blocks: B4 - without it, ingestion fails. Also decides whether 0006 is seven steps or eight.
@@ -168,3 +170,9 @@ Blocks: 0010, and therefore `dataFiles`.
 Options: (a) adopt Gali's 9 keys as the factory schema; (b) a generic five-key core plus a per-app extension; (c) copy all 9 verbatim including the two hard-coded values; (d) no metadata schema.
 Recommendation: (b). `gestational_age_max_weeks` is not a property of documents in general - a factory whose universal schema carries a gestational-age field has decided what kind of app it hosts. (c) is defensible if that is the honest answer, and that is your call to make.
 Default taken for now: none. The full 9-key schema and its validation rules are copied into `lib/gali/constants.ts` as a record of app #1. The question inside the question: **who may set the clinical booleans** - a creator who sets `contains_red_flags: false` on a haemorrhage document has made a safety error no schema can catch.
+
+## Q27 - Should the AWS-read KB parameters become constants in lib/gali/constants.ts
+Blocks: nothing today. Blocks the KB provisioning step from being written against a single source, and it is how `euclidean` gets forgotten.
+Options: (a) yes - add a hand-maintained, AWS-sourced block to `lib/gali/constants.ts` and to the generator, pinned by the golden test like everything else; (b) no - they live in `docs/gali-ground-truth.md` §9 as prose and the recipe quotes them; (c) yes, but in a separate module (`lib/gali/kbConfiguration.ts`) because their provenance is an API read rather than a repo read.
+Recommendation: (c). They are exactly the class of value this repo has decided to copy rather than choose - chunking `HIERARCHICAL`, parent 500, child 150, overlap **30**, `cohere.embed-multilingual-v3`, dimension 1024, `float32`, distance metric **euclidean**. But `lib/gali/constants.ts` is generated from Gali's Python source and its header says so, and an AWS-read value cannot be regenerated from that source. Mixing them would make the generator's `--check` lie.
+Default taken for now: (b). The values are recorded in `docs/gali-ground-truth.md` §9 with the exact commands that produced them, and `N13`/`N14` in the checklist name the two that change behaviour. No constant was added, because a constant is a contract and its module is a decision.

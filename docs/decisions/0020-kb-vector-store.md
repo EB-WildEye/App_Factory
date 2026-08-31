@@ -2,6 +2,57 @@
 
 Status: DRAFT — not accepted. EB decides.
 Date: 2026-08-31
+Amended: 2026-08-31, after reading AWS. **The store is S3 Vectors, which is none of
+the four options below, and the cost argument in the original recommendation does
+not apply to it.** Read the amendment before the options.
+
+## Amendment — what AWS actually says
+
+Read 2026-08-31 from KB `CHAU7BWP4S` (commands and full output in
+`docs/gali-ground-truth.md` §9):
+
+| fact | value |
+| ---- | ----- |
+| `storageConfiguration.type` | **`S3_VECTORS`** |
+| index | `arn:aws:s3vectors:eu-west-1:973938718804:bucket/bedrock-knowledge-base-ib3awf/index/bedrock-knowledge-base-default-index` |
+| vector bucket | `bedrock-knowledge-base-ib3awf`, created 2026-04-19, `AES256` |
+| dimension | `1024` — **confirms** the spec |
+| data type | `float32` |
+| distance metric | **`euclidean`** — the spec never mentions one |
+
+And the five parameters the spec calls fixed are **all confirmed**: `HIERARCHICAL`,
+parent 500, child 150, `cohere.embed-multilingual-v3`, 1024. The context section
+below was written when none of them could be checked; that is no longer true.
+
+What this changes about the decision:
+
+1. **The four options below are the wrong four.** S3 Vectors is not OpenSearch
+   Serverless, Aurora, or a third party. It is S3-backed vector storage: no
+   cluster, no collection, no provisioned capacity.
+2. **The recommendation's central argument is void.** It rested on OpenSearch
+   Serverless having a minimum billed capacity per collection, which made
+   per-app collections scale cost linearly with app count. **S3 Vectors has no
+   capacity floor**, so "one store per app" stops being the expensive option and
+   the cost case for sharing largely evaporates.
+3. **The remaining question is smaller and better.** Not *which store* — app #1
+   answered that — but *one index for all apps, or one index per app*. With no
+   capacity floor, per-app indexes buy isolation, per-app deletion at teardown, and
+   a metadata filter the factory does not have to get right, at close to no extra
+   cost. That is a real reversal of the original recommendation.
+4. **A new parameter appears that nobody had on the list.** `euclidean`. It is not
+   in the spec, the build plan, or any ADR. Creating factory indexes with cosine —
+   the more common default for text embeddings — would retrieve differently from
+   app #1 on identical vectors, with nothing to notice. Now checklist `N14`.
+
+**Revised recommendation: one S3 Vectors index per app, `dimension: 1024`,
+`float32`, `distanceMetric: euclidean`, in the factory's single region.** The
+original recommendation (shared collection) is withdrawn — it was correct
+reasoning about a store this factory is not using.
+
+What is still not answerable from AWS: whether a single vector *bucket* holding
+many indexes hits any per-bucket index quota. That is a limits question for the
+AWS console or support, not something the API tells you, and it is the one thing
+that could push the decision back toward sharing.
 
 Checklist row `N2` / `P4`. A gap, and the most expensive one in the log.
 
