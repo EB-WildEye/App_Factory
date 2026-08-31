@@ -1,7 +1,8 @@
 # 0015 — factoryApi route shapes
 
-Status: open
+Status: DRAFT — not accepted. EB decides.
 Date: 2026-08-23
+Recommendation added: 2026-08-31
 
 ## Context
 
@@ -46,17 +47,85 @@ Gaps in the proposed surface, beyond naming:
 3. **Implement against the mock only**, leaving `factoryApi.ts` route paths as a
    single named-constants module to be filled in when the backend is designed.
 
+## Recommendation
+
+**Option 1 — implement the surface, record the paths here as the contract the
+backend must satisfy.** That is what ADR 0003 says this milestone is *for*: the
+GUI's output is the backend spec. Option 2 waits for a backend that does not
+exist to name routes for a frontend that does; option 3 leaves a constants module
+full of placeholders, which is option 1 with the decision hidden.
+
+**First, a correction to the table above.** The `reembedFile` row says Bedrock
+ingestion jobs run per data source and that per-file re-embedding may not be
+achievable. That was true of the mechanism the spec describes and **it is not true
+of app #1.** Gali's KB uses a CUSTOM data source and pushes documents with
+`IngestKnowledgeBaseDocuments`, a **per-document upsert keyed on document id**
+(`docs/gali-ground-truth.md` §5). Per-file re-embedding is achievable. The
+constraint was real; the answer arrived by reading Gali.
+
+Proposed paths, all under the BFF so the browser only ever sees these:
+
+| operation | route |
+| --------- | ----- |
+| `listApps()` | `GET /api/apps` |
+| `createApp(config)` | `POST /api/apps` → `202 { appName }` |
+| `getApp(appName)` | `GET /api/apps/{appName}` |
+| `deleteApp(appName)` | `DELETE /api/apps/{appName}` |
+| `listFiles(appName)` | `GET /api/apps/{appName}/files` |
+| `readFile(appName, id)` | `GET /api/apps/{appName}/files/{id}` |
+| `writeFile(appName, id, body)` | `PUT /api/apps/{appName}/files/{id}` |
+| `deleteFile(appName, id)` | `DELETE /api/apps/{appName}/files/{id}` |
+| `reembedFile(appName, id)` | `POST /api/apps/{appName}/files/{id}/ingestions` |
+| `getIngestionStatus(appName, jobId)` | `GET /api/apps/{appName}/ingestions/{jobId}` |
+
+Four things in that table are recommendations, not conventions:
+
+1. **`getApp` and `deleteFile` are added.** `getApp` because every Data Center
+   screen works on one app and 0014's progress view polls it; `deleteFile` because
+   nothing currently removes a knowledge file, and a Data Center that can only
+   create is a Data Center that accumulates.
+2. **The path segment is `{id}`, not `{path}`.** A document id, not an S3 key. The
+   backend derives `kb/<id>.md` (0010), so no client-supplied key ever reaches S3
+   and the traversal question disappears instead of being validated against.
+3. **`reembedFile` POSTs to a collection and returns a job.** Re-embedding creates
+   something that can be polled; it is not an update to the file. This is also what
+   keeps save and re-embed two distinct actions, which the spec is firm about.
+4. **`deleteApp` must not return `void`.** A teardown can partially fail exactly
+   like a create can, so it returns the same provisioning-state shape 0013 defines.
+   `void` would make partial teardown unreportable by construction.
+
+**The normalised error shape**, which has prior art worth copying. Gali's
+`shared/shared/responses.py` returns `{"error": "<message>"}` with
+`Content-Type: application/json; charset=utf-8`, through one helper so no handler
+can drift. Recommend the same discipline with one field added:
+
+```json
+{ "error": "human-readable message", "code": "APP_NAME_TAKEN" }
+```
+
+`code` is a stable machine-readable constant; `error` is the message. The UI
+switches on `code` and displays `error`. One module builds it, and a handler that
+constructs its own error object is a bug — the same rule 0008 applies to the field
+mapper, for the same reason.
+
+Not recommended yet, deliberately: pagination for `listApps` (no evidence of scale),
+and an etag/concurrency story for `writeFile`. The second one is a real gap — two
+editors, last write wins, silently — and it needs its own decision rather than a
+guess buried in a route table.
+
 ## Decision
 
-Open. Not resolved here.
-
-## Reasoning
-
-Pending.
+Open — DRAFT. Awaiting EB. Route shapes are a `CLAUDE.md` Hard Rule 4
+stop-and-ask, so nothing above is implemented until it is accepted.
 
 ## Consequences
 
-Pending. Whatever is chosen, route paths are named constants in one module, per
+Whatever is chosen, route paths are named constants in one module, per
 `CLAUDE.md`. Also unresolved and needed with this: the normalised error shape
 every route handler returns, since *"normalise errors"* is a stated handler
 responsibility with no defined format.
+
+Accepting the recommendation unblocks `services/factoryApi.ts` and every route
+handler under `app/api`, which is most of Prompt 1. Coupled to 0013 (the state
+vocabulary the routes report) and 0014 (what `createApp` returns); all three should
+be accepted together or the surface will be internally inconsistent.

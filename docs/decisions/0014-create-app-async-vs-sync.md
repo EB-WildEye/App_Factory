@@ -1,7 +1,8 @@
 # 0014 — createApp: 202 async vs synchronous resource ids
 
-Status: open
+Status: DRAFT — not accepted. EB decides.
 Date: 2026-08-23
+Recommendation added: 2026-08-31
 
 ## Context
 
@@ -52,16 +53,44 @@ Option 1 and the resolution of 0013 are coupled: if a `pending` registry row is
 written first, the polling target is the registry row rather than a job handle,
 and no new operation is needed.
 
+## Recommendation
+
+**Option 1, with the registry row as the polling target rather than a job handle
+— which only works if 0013 is accepted, so decide the two together.**
+
+Option 3 is not really available. API Gateway's integration timeout is 29
+seconds and B4 is described as the longest step in the system, ending in an
+asynchronous ingestion job. A synchronous `createApp` returning resource ids would
+time out on a normal successful create, not on a slow one. The build plan's
+signature was written before that constraint was on the table.
+
+Between the two asynchronous options, the difference is whether a second concept
+exists. A job handle means a `jobId`, a job store, a `getProvisioningStatus`
+operation, and a rule for what happens when the handle is lost — and a lost handle
+leaves exactly the invisible half-created app that 0013 is trying to eliminate.
+A `pending` registry row is a concept the system already needs, and polling it
+needs no new operation beyond `getApp(appName)`, which 0015 already lists as a gap
+worth filling for other reasons.
+
+So: `createApp(config)` returns **`202` with `{ appName }`** — nothing that has to
+be stored client-side to be recoverable, because `appName` is chosen by the creator
+and is already the key to everything. The create form's last screen is a **progress
+view** driven by `getApp(appName)`, and it can be closed and reopened without
+losing anything.
+
+One consequence worth naming: `complete` is not final. A late ingestion failure
+lands after every provisioning step has succeeded, so either `getApp` reports
+ingestion state as part of provisioning state, or the App list can show `complete`
+for an app whose knowledge base is empty. Recommend the former, and note it makes
+`E9` (`getIngestionStatus`) part of the create flow and not only of re-embedding.
+
 ## Decision
 
-Open. Not resolved here.
-
-## Reasoning
-
-Pending.
+Open — DRAFT. Awaiting EB. Coupled to 0013 and 0015; deciding this one alone would
+leave two of the three inconsistent.
 
 ## Consequences
 
-Pending. This blocks the return type of `createApp`, the last step of the create
+This blocks the return type of `createApp`, the last step of the create
 form, and whether the mock's discrete-state model is polled or pushed. It is
 tightly coupled to 0013 and 0015 and should be decided together with them.
