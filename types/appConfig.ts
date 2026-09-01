@@ -1,3 +1,5 @@
+import type { ColourSchemeSelection } from '@/types/colourScheme';
+
 /**
  * `AppConfig` — the JSON the create form produces and the provisioning backend
  * consumes. It is the contract this milestone exists to define.
@@ -11,6 +13,21 @@
  * against an undecided contract is a compile error instead of a habit. See
  * `QUESTIONS.md`.
  */
+
+/**
+ * The structural templates that exist. **A closed enum, one member** (ADR 0023).
+ *
+ * `clinic-rtl` is the generalisation of Gali's current design: an RTL Hebrew shell
+ * with a fixed identity rail, a paper canvas and a floating composer. The id is the
+ * value both spec examples use.
+ *
+ * Adding a template means building one and adding it here — one list, and the schema
+ * and the render path both read it. An `AppConfig` naming a template the app does not
+ * ship is an app that cannot render, which is why this is an enum and not a string.
+ */
+export const UI_TEMPLATE_IDS = ['clinic-rtl'] as const;
+
+export type UiTemplateId = (typeof UI_TEMPLATE_IDS)[number];
 
 /**
  * The five system-prompt parts, in the container ADR 0008 settles as `systemPrompt`
@@ -53,16 +70,14 @@ export type UnresolvedDisclaimer = never;
 /**
  * One validated app configuration.
  *
- * Absent on purpose, and queued rather than invented:
+ * Still absent on purpose, and queued rather than invented: **a top-level
+ * `language`.** The spec's `app.config.json` has one, the build plan's `AppConfig`
+ * does not, and `_LANGUAGE` is already one of the five prompt parts. ADR 0008 fixes
+ * names and casing and says membership is still open, so the field is left out rather
+ * than added or aliased. See Q4.
  *
- * - a top-level `language`. The spec's `app.config.json` has one, the build plan's
- *   `AppConfig` does not, and `_LANGUAGE` is already one of the five prompt parts.
- *   ADR 0008 fixes names and casing and says membership is still open, so the field
- *   is left out rather than added or aliased.
- * - the ADR 0009 precedence flag. The amendment makes the precedence text a per-app
- *   flag, and says in as many words that the field's name and its home — `AppConfig`,
- *   the registry row, or both — are not settled. `composeSystemPrompt` therefore
- *   takes it as an argument, and no field name is guessed here.
+ * No longer absent: the ADR 0009 precedence flag is now `renderPrecedenceText`,
+ * because EB settled its home — `AppConfig` only, never the registry row.
  */
 export interface AppConfig {
   /**
@@ -76,15 +91,46 @@ export interface AppConfig {
   readonly appName: string;
 
   /**
-   * Which chat UI template the app renders.
+   * Which **structural** template the app renders. A closed enum of templates that
+   * have actually been built (ADR 0023).
    *
-   * BLOCKED: the set of valid values. Nobody has enumerated the templates, so this
-   * is `string` and not a union. Widening a union later is safe; narrowing one that
-   * was guessed is not.
+   * Colour is deliberately not part of this — see {@link colourScheme}. A template
+   * decides layout; a scheme decides paint. Keeping them separate is what stops five
+   * colour choices from multiplying into five templates.
+   *
+   * The single member's *name* remains Q22: `clinic-rtl` is the value both spec
+   * examples use, so it is the spec's word rather than a guess — but renaming it later
+   * is a data migration, because the id lands in every registry row.
    */
-  readonly uiTemplate: string;
+  readonly uiTemplate: UiTemplateId;
+
+  /**
+   * The app's colours: a preset by id, or a full custom scheme (ADR 0023).
+   *
+   * A custom scheme must fill every role in `COLOUR_ROLES` and must clear WCAG 2.1 AA
+   * on every pair in `CONTRAST_PAIRS`. Both are enforced by the schema at the
+   * boundary, so an unreadable app cannot be created — checked at save time, not at
+   * render time.
+   */
+  readonly colourScheme: ColourSchemeSelection;
 
   readonly systemPrompt: AppConfigSystemPrompt;
+
+  /**
+   * ADR 0009 as amended: render the precedence text into the composed prompt, or not.
+   *
+   * **Default on for new apps, off for Gali.** A field on `AppConfig` and nowhere else
+   * — the flag changes the composed prompt, the composed prompt is built from
+   * `AppConfig`, and a second copy on the registry row would eventually disagree with
+   * the config that produced the prompt.
+   *
+   * For Gali it is off by **constraint** as well as by choice: the five-part draft
+   * measures 4047 of 4096 characters, leaving 49, and the precedence paragraph is
+   * roughly 200. Enabling it for Gali later means removing something else first.
+   *
+   * Wire name QUEUED (Q40) — no spec artefact names this field.
+   */
+  readonly renderPrecedenceText: boolean;
 
   /**
    * Where this app's daily conversation digest is emailed. Per ADR 0028 the digest

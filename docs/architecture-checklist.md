@@ -1,3 +1,4 @@
+
 # Architecture checklist
 
 Derived from `docs/app-factory-architecture.html`, read in full — map, services

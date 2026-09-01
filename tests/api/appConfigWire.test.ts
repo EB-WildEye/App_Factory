@@ -14,6 +14,8 @@ import type { AppConfig } from '@/types/appConfig';
 const GALI_CONFIG: AppConfig = {
   appName: 'gali',
   uiTemplate: 'clinic-rtl',
+  colourScheme: { kind: 'preset', presetId: 'gali-sage' },
+  renderPrecedenceText: false,
   digestRecipientEmail: 'gynecology-digest@wolfson.example.gov.il',
   systemPrompt: {
     identity: GALI_SYSTEM_PROMPT_PARTS.identity,

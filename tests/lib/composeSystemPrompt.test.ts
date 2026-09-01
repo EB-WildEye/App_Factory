@@ -62,7 +62,7 @@ function composeExpectingTooLong(
   renderPrecedenceText: boolean,
 ): ComposedPromptTooLongError {
   try {
-    composeSystemPrompt(parts, { renderPrecedenceText });
+    composeSystemPrompt({ systemPrompt: parts, renderPrecedenceText });
   } catch (error) {
     if (error instanceof ComposedPromptTooLongError) {
       return error;
@@ -74,7 +74,7 @@ function composeExpectingTooLong(
 
 describe('composeSystemPrompt — join order and separator', () => {
   test('the five parts join in the fixed order with no separator', () => {
-    expect(composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: false })).toBe(
+    expect(composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: false })).toBe(
       `I.L.V.R1.${RULES_ITEM_SEPARATOR}R2.F.`,
     );
   });
@@ -84,10 +84,10 @@ describe('composeSystemPrompt — join order and separator', () => {
   });
 
   test('rules are joined with the rule separator, in authored order', () => {
-    const composed = composeSystemPrompt(
-      { ...SMALL_PARTS, rules: ['first', 'second', 'third'] },
-      { renderPrecedenceText: false },
-    );
+    const composed = composeSystemPrompt({
+      systemPrompt: { ...SMALL_PARTS, rules: ['first', 'second', 'third'] },
+      renderPrecedenceText: false,
+    });
     const joined = ['first', 'second', 'third'].join(RULES_ITEM_SEPARATOR);
     expect(composed).toBe(`I.L.V.${joined}F.`);
   });
@@ -102,41 +102,42 @@ describe('composeSystemPrompt — join order and separator', () => {
 
 describe('composeSystemPrompt — the precedence flag (ADR 0009 as amended)', () => {
   test('flag on renders the precedence text', () => {
-    const composed = composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: true });
+    const composed = composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: true });
     expect(composed).toContain(PROMPT_PRECEDENCE_TEXT);
   });
 
   test('flag on places the precedence text after the rules and before the format part', () => {
-    expect(composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: true })).toBe(
+    expect(composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: true })).toBe(
       `I.L.V.R1.${RULES_ITEM_SEPARATOR}R2.${PROMPT_PRECEDENCE_TEXT}F.`,
     );
   });
 
   test('flag off omits it entirely — this is the Gali case', () => {
-    const composed = composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: false });
+    const composed = composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: false });
     expect(composed).not.toContain(PROMPT_PRECEDENCE_TEXT);
     expect(composed).not.toContain('the prompt rule governs');
   });
 
   test('the flag changes the composed length, so it spends part of the 4096 budget', () => {
-    const off = composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: false });
-    const on = composeSystemPrompt(SMALL_PARTS, { renderPrecedenceText: true });
+    const off = composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: false });
+    const on = composeSystemPrompt({ systemPrompt: SMALL_PARTS, renderPrecedenceText: true });
     expect(on.length).toBe(off.length + PROMPT_PRECEDENCE_TEXT.length);
   });
 });
 
 describe('composeSystemPrompt — the 4096 cap (ADR 0016)', () => {
   test('exactly at the limit is allowed', () => {
-    const composed = composeSystemPrompt(
-      partsOfLength(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT),
-      { renderPrecedenceText: false },
-    );
+    const composed = composeSystemPrompt({
+      systemPrompt: partsOfLength(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT),
+      renderPrecedenceText: false,
+    });
     expect(composed.length).toBe(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT);
   });
 
   test('one character over the limit throws', () => {
     expect(() =>
-      composeSystemPrompt(partsOfLength(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT + 1), {
+      composeSystemPrompt({
+        systemPrompt: partsOfLength(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT + 1),
         renderPrecedenceText: false,
       }),
     ).toThrow(ComposedPromptTooLongError);
@@ -152,9 +153,11 @@ describe('composeSystemPrompt — the 4096 cap (ADR 0016)', () => {
   test('the precedence text alone can push a passing prompt over the cap', () => {
     const parts = partsOfLength(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT);
     expect(() =>
-      composeSystemPrompt(parts, { renderPrecedenceText: false }),
+      composeSystemPrompt({ systemPrompt: parts, renderPrecedenceText: false }),
     ).not.toThrow();
-    expect(() => composeSystemPrompt(parts, { renderPrecedenceText: true })).toThrow(
+    expect(() =>
+      composeSystemPrompt({ systemPrompt: parts, renderPrecedenceText: true }),
+    ).toThrow(
       ComposedPromptTooLongError,
     );
   });
