@@ -66,12 +66,17 @@ export class ComposedPromptTooLongError extends Error {
   }
 }
 
-export interface ComposeSystemPromptOptions {
-  /**
-   * ADR 0009 as amended: render the precedence text, or not. Default on for new apps
-   * and off for Gali, but the default lives in the create form, not here — a pure
-   * function with a hidden default is how two callers end up composing two prompts.
-   */
+/**
+ * What this function needs from an `AppConfig`: the five parts, and the precedence
+ * flag. Nothing else.
+ *
+ * Structurally satisfied by `AppConfig` itself, so a caller passes the config it
+ * already has. Declared as its own type rather than taking the whole `AppConfig`
+ * because composition depends on two fields, and a function that accepts the entire
+ * config invites someone to reach for a third.
+ */
+export interface PromptComposition {
+  readonly systemPrompt: AppConfigSystemPrompt;
   readonly renderPrecedenceText: boolean;
 }
 
@@ -81,25 +86,28 @@ function joinRules(rules: readonly string[]): string {
 }
 
 /**
- * Compose the five parts into one system prompt.
+ * Compose the five parts of a config into one system prompt.
+ *
+ * Takes the config, not five loose arguments and a boolean: ADR 0009's flag is now a
+ * field on `AppConfig` (EB, 2026-09-01), so the composer reads it from the config that
+ * produced the parts. That removes the previous workaround, where the flag was an
+ * argument a caller could set inconsistently with the config it came from.
  *
  * The precedence text, when rendered, goes immediately after `rules`: it is a
  * statement about how rules relate to retrieved material, so it belongs with them.
- * QUEUED — ADR 0009 requires the text but does not fix its position.
+ * QUEUED (Q6) — ADR 0009 requires the text but does not fix its position.
  *
  * @throws {ComposedPromptTooLongError} when the result exceeds 4096 characters.
  */
-export function composeSystemPrompt(
-  parts: AppConfigSystemPrompt,
-  options: ComposeSystemPromptOptions,
-): string {
+export function composeSystemPrompt(config: PromptComposition): string {
+  const parts = config.systemPrompt;
   const rendered: Record<GaliSystemPromptPartName, string> = {
     identity: parts.identity,
     language: parts.language,
     voice: parts.voice,
     rules:
       joinRules(parts.rules) +
-      (options.renderPrecedenceText ? PROMPT_PRECEDENCE_TEXT : ''),
+      (config.renderPrecedenceText ? PROMPT_PRECEDENCE_TEXT : ''),
     formatAndFlags: parts.formatAndFlags,
   };
 

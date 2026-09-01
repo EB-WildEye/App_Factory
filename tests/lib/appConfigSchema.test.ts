@@ -9,6 +9,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { appConfigSchema, parseAppConfig } from '@/lib/appConfigSchema';
+import { CLINICAL_BLUE_SCHEME, GALI_SAGE_SCHEME } from '@/lib/colourSchemes';
 import { GALI_SYSTEM_PROMPT_PARTS } from '@/lib/gali/constants';
 import type { AppConfig } from '@/types/appConfig';
 
@@ -20,6 +21,8 @@ import type { AppConfig } from '@/types/appConfig';
 const GALI_CONFIG: AppConfig = {
   appName: 'gali',
   uiTemplate: 'clinic-rtl',
+  colourScheme: { kind: 'preset', presetId: 'gali-sage' },
+  renderPrecedenceText: false,
   digestRecipientEmail: 'gynecology-digest@wolfson.example.gov.il',
   systemPrompt: {
     identity: GALI_SYSTEM_PROMPT_PARTS.identity,
@@ -35,6 +38,8 @@ const GALI_CONFIG: AppConfig = {
 const REQUIRED_TOP_LEVEL_FIELDS = [
   'appName',
   'uiTemplate',
+  'colourScheme',
+  'renderPrecedenceText',
   'digestRecipientEmail',
   'systemPrompt',
   'dataFiles',
@@ -128,6 +133,119 @@ describe('appConfigSchema — the digest recipient (ADR 0028)', () => {
     expect(parseAppConfig(GALI_CONFIG).digestRecipientEmail).toBe(
       'gynecology-digest@wolfson.example.gov.il',
     );
+  });
+});
+
+describe('appConfigSchema — the colour scheme (ADR 0023)', () => {
+  test('a preset by id is accepted', () => {
+    expect(appConfigSchema.safeParse(GALI_CONFIG).success).toBe(true);
+  });
+
+  test('an unknown preset id is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = { kind: 'preset', presetId: 'not-a-scheme' };
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('a complete, contrast-passing custom scheme is accepted', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = { kind: 'custom', colours: { ...CLINICAL_BLUE_SCHEME } };
+    expect(appConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  test('a custom scheme missing one role is rejected', () => {
+    // The whole point of the closed role set: a partial scheme leaves the template
+    // painting with undefined, which renders as "inherit" and looks broken.
+    const colours: Record<string, unknown> = { ...CLINICAL_BLUE_SCHEME };
+    delete colours.focusRing;
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = { kind: 'custom', colours };
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('a custom scheme with an extra role is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = {
+      kind: 'custom',
+      colours: { ...CLINICAL_BLUE_SCHEME, surfaceMystery: '#123456' },
+    };
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('a custom scheme with a malformed colour is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = {
+      kind: 'custom',
+      colours: { ...CLINICAL_BLUE_SCHEME, textPrimary: '#ABC' },
+    };
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('a custom scheme that fails WCAG AA is rejected at save time', () => {
+    // Light grey body text on a white canvas: legible to the person who chose it on a
+    // good monitor, and not to a patient on a phone in daylight.
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = {
+      kind: 'custom',
+      colours: { ...CLINICAL_BLUE_SCHEME, textPrimary: '#b0b0b0' },
+    };
+    const result = appConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
+  test('every failing pair is reported, not just the first', () => {
+    // A creator fixing one colour at a time through a sequence of errors is in a maze.
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = {
+      kind: 'custom',
+      colours: { ...CLINICAL_BLUE_SCHEME, textPrimary: '#b0b0b0' },
+    };
+    const result = appConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+    // textPrimary is checked against four surfaces, so a bad value fails four pairs.
+    expect(result.error?.issues.length).toBe(4);
+  });
+
+  test("Gali's own preset is accepted even though it fails AA, because presets are not contrast-gated", () => {
+    // Deliberate and recorded in ADR 0023: the gate is on custom schemes. Gating the
+    // preset would make app #1 uncreatable by the factory that exists to create it.
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = { kind: 'preset', presetId: 'gali-sage' };
+    expect(appConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  test('the same values supplied as a custom scheme ARE rejected', () => {
+    // The asymmetry is the whole design, so it is pinned: identical colours, different
+    // answer, because one is a recorded exception and the other is a new choice.
+    const config = mutableCopy(GALI_CONFIG);
+    config.colourScheme = { kind: 'custom', colours: { ...GALI_SAGE_SCHEME } };
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+});
+
+describe('appConfigSchema — the precedence flag (ADR 0009, EB 2026-09-01)', () => {
+  test('false is accepted — the Gali case', () => {
+    expect(appConfigSchema.safeParse(GALI_CONFIG).success).toBe(true);
+  });
+
+  test('true is accepted — the default for a new app', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.renderPrecedenceText = true;
+    expect(appConfigSchema.safeParse(config).success).toBe(true);
+  });
+
+  test('it is required, with no schema default', () => {
+    // A schema default would silently turn an omitted field into "on" for any config
+    // assembled outside the create form - including Gali's, where it must be off.
+    const config = mutableCopy(GALI_CONFIG);
+    delete config.renderPrecedenceText;
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
+  });
+
+  test('a non-boolean is rejected', () => {
+    const config = mutableCopy(GALI_CONFIG);
+    config.renderPrecedenceText = 'on';
+    expect(appConfigSchema.safeParse(config).success).toBe(false);
   });
 });
 

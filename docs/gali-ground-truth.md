@@ -5,8 +5,8 @@ never a value to be chosen**. Where a source is silent, this document says so
 instead of filling the gap — see
 [What is not in the Gali repos](#what-is-not-in-the-gali-repos).
 
-Two sources, because one was not enough. Sections 1-8 and 10 are read out of the
-two read-only repos (2026-08-30 and 2026-08-31). **Section 9 is read out of AWS
+Two sources, because one was not enough. Sections 1-8, 10 and 11 are read out of the
+two read-only repos (2026-08-30 to 2026-09-01). **Section 9 is read out of AWS
 (2026-08-31)**, and it exists because Gali's Knowledge Base was created by hand in
 the console, so its configuration is in no repo at all.
 
@@ -627,6 +627,85 @@ Not settled by copying, and each is a decision rather than a value:
 
 These are recorded here as observations. They are queued as Q28 and belong with
 0024 (auth) rather than being decided in a ground-truth document.
+
+---
+
+## 11. The palette, and how the frontend uses colour
+
+Read from `Gali-frontend` on 2026-09-01: `src/index.css`, `tailwind.config.js`,
+`index.html`, and every component.
+
+### 11.1 The declared tokens
+
+The sage and bone scales are declared **twice** — in `tailwind.config.js` and again as
+CSS variables in `src/index.css:9-30` — and the values agree. The CSS variables are
+cited here because that is what the browser reads and what SVG and inline styles can
+see.
+
+| token | value | | token | value |
+| ----- | ----- | - | ----- | ----- |
+| `--sage-25` | `#f4f7f5` | | `--sage-700` | `#3a6b5c` |
+| `--sage-50` | `#eef5f1` | | `--sage-800` | `#2d5a4c` **primary brand** |
+| `--sage-100` | `#e4efe8` | | `--sage-900` | `#244c3f` |
+| `--sage-200` | `#d5e5db` | | `--sage-950` | `#1a3d32` |
+| `--sage-300` | `#b9d6cb` | | `--bone-50` | `#faf8f5` |
+| `--sage-400` | `#94c2b3` | | `--bone-100` | `#f4f1eb` |
+| `--sage-500` | `#6ba393` | | `--bone-200` | `#e8e2d7` |
+| `--sage-600` | `#4a8b7a` | | `--ink` | `#1f2a26` |
+| | | | `--ink-soft` | `#4a5a54` |
+| | | | `--ink-mute` | `#7d8a83` |
+
+`tailwind.config.js` also declares `--bone-300` `#d6cbb8`, which `index.css` does not,
+and which nothing uses.
+
+`index.html:7` carries `<meta name="theme-color" content="#2d5a4c">` — the same
+`--sage-800`, so the browser chrome matches the brand surface.
+
+### 11.2 Three facts about how it is used
+
+These were checked, not assumed, and each one is load-bearing for the factory's
+theming system (ADR 0023).
+
+1. **Every shadow in the stylesheet is tinted with one colour.** Every `box-shadow`
+   uses `rgba(26, 61, 50, α)` — that is `#1a3d32`, `--sage-950` — at alphas from 0.03
+   to 0.5. There is not a single neutral grey shadow. A scheme that left shadows grey
+   would look wrong on a coloured surface for a reason nobody could name, which is why
+   `shadowTint` is one of the nineteen roles.
+2. **There is no colour anywhere outside these tokens.** No hex literals in any
+   component, no Tailwind colour class outside `sage-*` and `bone-*`, no `rgba()` in
+   any component, and every SVG uses `fill="currentColor"` or `stroke="currentColor"`.
+   The discipline is total.
+3. **Links are distinguished by underline, not by colour.** Markdown links inside a
+   bubble get `underline underline-offset-2` and **no colour class**
+   (`src/components/MessageBubble.tsx:67-70`), so they inherit the bubble's text
+   colour. Good practice, and it means the phone-number links pass contrast wherever
+   the body text does.
+
+### 11.3 No status colours exist
+
+There is **no error, warning or success colour** in the Gali frontend. Its only error
+path returns a Hebrew fallback sentence from `apiService` and renders it as an ordinary
+assistant bubble; the sole occurrence of the word "error" in the components is a
+comment about ignoring clipboard failures.
+
+So a Gali-derived colour scheme has no status colours to copy, and the factory's role
+set omits them rather than inventing values. See ADR 0023 and Q42.
+
+### 11.4 Two WCAG AA failures
+
+Computed from the values above. Recorded here as a property of app #1, and discussed
+in ADR 0023.
+
+| pair | ratio | required |
+| ---- | ----- | -------- |
+| `--sage-600` on `#ffffff` | **3.99** | 4.5 — it is used only at 10-11px |
+| `--sage-600` on `--bone-50` | **3.76** | 4.5 |
+| `--sage-600` on `--sage-50` | **3.60** | 4.5 |
+| `--sage-400` on `#ffffff` | **1.98** | 3.0 — a focused input border is a UI component |
+
+`:focus-visible` uses `--sage-600` at 3.99:1 against white, which clears the 3:1 a
+focus indicator needs. Keyboard focus is fine; the composer's `:focus-within` border is
+not.
 
 ---
 

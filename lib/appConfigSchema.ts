@@ -14,7 +14,68 @@
 
 import { z } from 'zod';
 
+import { isHexColour } from '@/lib/colourContrast';
+import { describeContrastFailure, findContrastFailures } from '@/lib/colourSchemeValidation';
+import { COLOUR_ROLES, PRESET_SCHEME_IDS } from '@/types/colourScheme';
+import { UI_TEMPLATE_IDS } from '@/types/appConfig';
+import type { ColourRole, ColourScheme } from '@/types/colourScheme';
 import type { AppConfig } from '@/types/appConfig';
+
+/**
+ * A hex colour, lowercase `#rrggbb`. Shorthand and alpha are rejected: a scheme is
+ * written into CSS variables that SVG and inline styles also read, and `#abc` or
+ * `#rrggbbaa` behave differently across those contexts.
+ */
+const hexColourSchema = z.string().refine(isHexColour, {
+  message: 'Must be a lowercase six-digit hex colour, for example #2d5a4c',
+});
+
+/**
+ * A complete colour scheme: **every** role in `COLOUR_ROLES`, none missing, none extra.
+ *
+ * Built from the role list rather than written out, so adding a role cannot leave the
+ * schema behind. `z.strictObject` is what rejects the extra key; the generated shape is
+ * what rejects the missing one.
+ */
+export const colourSchemeSchema = z.strictObject(
+  Object.fromEntries(COLOUR_ROLES.map((role) => [role, hexColourSchema])) as Record<
+    ColourRole,
+    typeof hexColourSchema
+  >,
+);
+
+/**
+ * A custom scheme, additionally required to clear WCAG 2.1 AA on every checked pair.
+ *
+ * ADR 0023: this is an accessibility requirement, not a preference, and it is checked
+ * **at save time** — a creator who picks an unreadable pair is told while they are
+ * still looking at it. Every failing pair is reported, not just the first, because
+ * fixing one colour at a time through a sequence of errors is a maze.
+ */
+const contrastCheckedSchemeSchema = colourSchemeSchema.superRefine((scheme, ctx) => {
+  for (const failure of findContrastFailures(scheme as ColourScheme)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [failure.foreground],
+      message: describeContrastFailure(failure),
+    });
+  }
+});
+
+/**
+ * Preset by id, or a full custom scheme. Discriminated on `kind` so an error points at
+ * the branch the creator actually chose rather than reporting both as wrong.
+ */
+export const colourSchemeSelectionSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('preset'),
+    presetId: z.enum(PRESET_SCHEME_IDS),
+  }),
+  z.strictObject({
+    kind: z.literal('custom'),
+    colours: contrastCheckedSchemeSchema,
+  }),
+]);
 
 /**
  * The five prompt parts. Only membership and type are checked here.
@@ -40,8 +101,23 @@ export const appConfigSchema = z.strictObject({
    */
   appName: z.string().min(1),
 
-  /** BLOCKED: no enumeration of valid templates exists, so any non-empty string. */
-  uiTemplate: z.string().min(1),
+  /**
+   * ADR 0023: a closed enum of built templates. An unknown value is a validation
+   * error at the boundary rather than a render-time fallback, because the person a
+   * silent fallback affects is a patient looking at the wrong app.
+   */
+  uiTemplate: z.enum(UI_TEMPLATE_IDS),
+
+  /** ADR 0023. Completeness and contrast are both enforced here. */
+  colourScheme: colourSchemeSelectionSchema,
+
+  /**
+   * ADR 0009 as amended. **No default in the schema.** The default belongs to the
+   * create form, which knows it is creating a new app; a schema default would silently
+   * turn an omitted field into "on" for a config assembled anywhere else - including
+   * for Gali, where it must be off.
+   */
+  renderPrecedenceText: z.boolean(),
 
   systemPrompt: appConfigSystemPromptSchema,
 

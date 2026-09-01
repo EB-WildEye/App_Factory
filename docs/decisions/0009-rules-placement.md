@@ -202,6 +202,32 @@ One knock-on worth stating: the text is currently in the ADR's English wording,
 and every app so far is Hebrew RTL. Whether a Hebrew app needs a Hebrew rendering
 of it is queued as `QUESTIONS.md` Q6 and is not settled here.
 
+**Amended 2026-09-01 — the flag's home is settled: `AppConfig` only.**
+
+EB decided. The flag is a field on `AppConfig`, **not** on the registry row and not on
+both. The reasoning is the one this ADR's earlier amendment left open: the flag changes
+the composed prompt, the composed prompt is built from `AppConfig`, and a second copy
+on the registry row would eventually disagree with the config that produced the prompt.
+Two sources of truth for one byte-level output is a bug waiting for the first edit.
+
+Implemented as `AppConfig.renderPrecedenceText`, a required boolean with **no schema
+default**. The default — on for a new app, off for Gali — belongs to the create form,
+which knows it is creating something new. A schema default would silently turn an
+omitted field into "on" for any config assembled elsewhere, including Gali's.
+
+`composeSystemPrompt` now takes the config and reads the flag from it, replacing the
+previous workaround where the flag was a separate function argument a caller could set
+inconsistently with the config the parts came from.
+
+**And for Gali the flag is off by constraint, not only by choice.** The five-part draft
+in `docs/gali-five-parts-draft.md` measures **4047 of 4096** characters, leaving **49**.
+The precedence paragraph is roughly **200**. So enabling it for Gali later is not a
+setting change — it requires removing about 150 characters of clinical text from the
+composed prompt first. That is worth stating explicitly, because "it is just a flag"
+would otherwise be the natural assumption.
+
+Wire name queued as Q40; no spec artefact names this field.
+
 One further constraint found in the same read, and it is not in the spec or the
 checklist: Gali's live prompt is **not** the five-part composition. See the
 report of Prompt 0 step 1d — `SYSTEM_PROMPT` is documentation, `RAG_PROMPT_TEMPLATE`
