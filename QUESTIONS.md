@@ -110,7 +110,8 @@ Default taken for now: none. `services/factoryApi.ts` does not exist yet, so no 
 Blocks: `services/factoryApi.ts` and every route handler under `app/api` - most of Prompt 1.
 Options: (a) implement the surface and record the paths as the contract the backend must satisfy; (b) settle paths first, then implement; (c) implement against the mock only, paths as placeholders.
 Recommendation: (a), which is what ADR 0003 says this milestone is for. The ADR proposes ten routes, adds `getApp` and `deleteFile`, and copies Gali's one-helper error discipline as `{ error, code }`.
-Default taken for now: none - route shapes are a CLAUDE.md Hard Rule 4 stop-and-ask. One correction did land: 0015's claim that per-file re-embedding may be impossible is false for app #1, whose CUSTOM data source upserts per document.
+Default taken for now: none - route shapes are a CLAUDE.md Hard Rule 4 stop-and-ask.
+Superseded detail, 2026-09-01: 0015's claim that per-file re-embedding may be impossible was corrected to "achievable, app #1 upserts per document" - and that correction held only because app #1 uses a CUSTOM data source. Draft ADR 0030 chooses **S3** for the factory, which restores the original constraint: `StartIngestionJob` has no file parameter. So the surface changes - `reembedFile(appName, path)` becomes `reingestKnowledgeBase(appName)`. **0030 should be accepted before 0015**, or 0015 will be accepted with a route that cannot exist.
 
 ## Q17 - ADR 0018: is Gali an exception, or does the factory reproduce it byte-for-byte
 Blocks: nothing immediately, and quietly conditions every ADR that says "the spec fixes this value". It is the largest open question in the repo.
