@@ -177,6 +177,7 @@ Order is identical in both sources and is the one thing not in dispute.
 | U14 | Mock renders a half-created app from day one, not as a bolted-on edge case | `M1` |
 | U15 | README notes that a static export is impossible | `M1` |
 | U16 | Create app: live character count of the **composed** prompt against the 4096 cap, and save is blocked above it. `composeSystemPrompt` fails rather than truncating. | `M1`, → 0016. **Not in the spec or the build plan** — the cap is a Bedrock service limit found by reading Gali. |
+| U17 | Create app: the `appName` field states, visibly and permanently, that the name can never be changed — it is the registry partition key (0007) and it determines the bucket name (0025), and neither can be renamed. Not a tooltip, not an after-the-fact error. On an existing app the field is **absent**, replaced by the value as text — not disabled. | `M1`, **binding** (EB, 2026-09-01). Copy lives in `lib/uiStrings.ts`. |
 
 ## 12. Open items — the full TBD set
 

@@ -61,9 +61,17 @@ in 0021.
 In order. Steps are numbered `K-n` so the rollback table in §7 can refer to them.
 The order is forced: each step needs an identifier the previous one returns.
 
+> **Annotation, 2026-09-01.** K-1 below pairs `CreateBucket` with a bucket-policy
+> write. That was written against ADR 0021's original recommendation (d). ADR 0025's
+> derived bucket pattern has since moved 0021 toward (b) — one shared role with a
+> naming-prefix wildcard, written once at platform setup — under which **the policy
+> write disappears from the create path entirely**. The step is left as written because
+> 0021 is still a draft; if (b) is accepted, K-1 is `CreateBucket` alone and the
+> rollback in §7 loses nothing, since a bucket policy dies with its bucket.
+
 | # | API call | service | returns | blocking? |
 | - | -------- | ------- | ------- | --------- |
-| K-1 | `CreateBucket` (+ bucket policy) | `s3` | bucket name | synchronous |
+| K-1 | `CreateBucket` (+ bucket policy — see the annotation above) | `s3` | bucket name | synchronous |
 | K-2 | `CreateIndex` | `s3vectors` | `indexArn` | synchronous — see §5 |
 | K-3 | `CreateKnowledgeBase` | `bedrock-agent` | `knowledgeBaseId`, `status: CREATING` | **asynchronous** |
 | K-4 | `GetKnowledgeBase` until `ACTIVE` | `bedrock-agent` | `status` | poll |
