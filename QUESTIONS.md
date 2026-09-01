@@ -210,3 +210,27 @@ Options: (a) a single button above the file list, labelled `הטמעה מחדש 
 Recommendation: (a) or (b), and definitely not (c). With an S3 data source `StartIngestionJob` has no file parameter, so a control on a file row would claim a scope the API cannot honour - and that is the kind of button that gets clicked twenty times. Save stays per file; re-ingest is per app, and the UI should make the asymmetry visible rather than hide it.
 Default taken for now: none - no UI exists yet. Recorded so Prompt 3 does not inherit the spec's per-file framing by accident. The Hebrew wording above is a suggestion for `lib/uiStrings.ts`, not a decision.
 
+## Q33 - How is provisioning orchestration implemented
+Blocks: the whole provisioning backend. Nothing in Milestone 1 UI, which talks to a mock.
+Options: (a) AWS Step Functions Standard; (b) a Lambda orchestrator with its state in DynamoDB and a resume schedule; (c) a CloudFormation stack per app; (d) EventBridge choreography - found and rejected in the comparison, because no single place knows the in-flight state.
+Recommendation: (a). Full reasoning in `docs/provisioning-architecture-comparison.md`. The deciding argument is the requirement that motivated the comparison - what happens when the rollback itself fails - and only (a) has a primitive for it: `RedriveExecution` restarts a failed execution **from the failed state**, keeping its history, with `redriveCount` and `PENDING_REDRIVE` visible in `DescribeExecution`. Verified in the service model, not recalled. In (b) that path is code nobody has exercised; in (c) it is a stuck stack and a console session.
+Default taken for now: none, nothing implemented. The costs are stated in the document: ASL is a second language in the repo, local end-to-end testing is worse than (b), and Standard billing is per state transition so the poll interval becomes a cost parameter that must be chosen rather than defaulted. Re-examine (c) if either of two things changes - the `DeletionPolicy` trap, where one knob cannot serve both "clean up a failed create" and "never destroy patient conversations"; or the unverified question of whether CloudFormation has resource types for the Bedrock KB, the data source and the S3 Vectors index at all.
+
+## Q34 - Is uploading the kb/ objects a step in its own right
+Blocks: the rollback list, and ADR 0006's step count. Not Milestone 1 UI.
+Options: (a) a step of its own, making the sequence eight; (b) it folds into the bucket step, which then means "create the bucket and populate it"; (c) it folds into the data source step, since 0030 makes it a precondition of ingestion.
+Recommendation: (a). The seven-step list omits it and the spec has it as B2. It creates real resources with their own compensating action, and under 0030 it must complete before ingestion reads the prefix - so a create that fails at the knowledge base strands **objects**, not just a bucket, which is a rollback-list item the seven-step framing loses.
+Default taken for now: the comparison document lists it as step **1b** rather than silently renumbering, so no count is asserted. Same ambiguity ADR 0006 is already open about; settle them together.
+
+## Q35 - What detects a create whose rollback never ran at all
+Blocks: nothing today. It is the hole ADR 0031 leaves, stated rather than hidden.
+Options: (a) a per-execution timeout that forces a terminal state; (b) a scheduled sweeper that finds rows stuck in `provisioning` past a threshold; (c) both.
+Recommendation: (c). If the orchestrator dies between the failure and the rollback, the row sits in `provisioning` forever and **neither** terminal state in 0031 is reached, so no operator is ever told. A timeout inside the orchestration cannot cover the case where the orchestration itself is gone - which is exactly the case that needs covering.
+Default taken for now: none. Recorded in 0031's Consequences as the one hole it does not close.
+
+## Q36 - Approve the error dictionary, and how hard should ValidationException be parsed
+Blocks: the mapping module and the Hebrew copy per code. The shape is already yours; this is the contents.
+Options for the parsing sub-question: (a) parse the message to separate `KB_MODEL_UNAVAILABLE_IN_REGION` from `KB_INVALID_CONFIGURATION`; (b) do not parse - one code for every Bedrock `ValidationException`; (c) parse narrowly and fall back to the vague code whenever the match is not unambiguous.
+Recommendation: (c). Bedrock returns `ValidationException` for a bad model ARN, a malformed storage configuration and a bad name alike, so the only separator is the message string, which is fragile by construction. A **wrong specific code is worse than a right vague one**, because the UI acts on it and counts are compared across months.
+Default taken for now: none, and deliberately no enum was written - the codes are a contract and the ADR is a draft. Provider exception names in the dictionary are extracted from the botocore service models rather than recalled, and the gaps are marked: `CreateBucket` declares only two errors, `DeleteBucket` and `DeleteObjects` declare none at all. That is why `PROVIDER_UNMAPPED` exists.
+
