@@ -61,7 +61,10 @@ much as the argument in it, and nothing depends on it in code.
 | [0024](0024-admin-authentication-model.md) | The admin authentication model | DRAFT |
 | [0025](0025-app-name-and-bucket-naming-law.md) | `appName` is S3 naming law, and it is permanent | DRAFT |
 | [0026](0026-partial-app-delete-semantics.md) | Deleting a partial app | DRAFT |
-| [0027](0027-kb-document-metadata-schema.md) | The per-document KB metadata schema | DRAFT |
+| [0027](0027-kb-document-metadata-schema.md) | The per-document KB metadata schema | DRAFT on the split; model DECIDED |
+| [0028](0028-daily-conversation-digest.md) | Daily conversation digest, deletion after a confirmed send | DRAFT; policy approved |
+| [0029](0029-validation-harness-as-factory-infrastructure.md) | The validation harness is factory infrastructure | DRAFT |
+| [0030](0030-s3-data-source-one-door.md) | One door: the factory provisions an S3 data source | DRAFT |
 
 ## Coupled decisions
 
@@ -73,3 +76,6 @@ Accepting one of these without the others leaves the set inconsistent.
 | the app's name | 0007, 0019, 0025 | `appName` is the partition key, the bucket name and a DNS label, in one region |
 | the knowledge base | 0010, 0020, 0021, 0027 | document structure, vector store, data-access role and metadata schema |
 | app #1 | 0009, 0016, 0018, 0022 | whether Gali is composed or imported decides what the cap and the version policy apply to |
+| the knowledge base, revised | 0020, 0021, 0030 | the store is S3 Vectors, the door is S3, and an S3 door is what forces the role to read the bucket |
+| conversation retention | 0028, and Gali's patient-facing disclaimer | deletion after a confirmed send needs a longer TTL, and the TTL is a promise made to the patient |
+| lifecycle states | 0013, 0029 | provisioning state and validation state are two independent axes on the same registry row |

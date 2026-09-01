@@ -149,7 +149,7 @@ Order is identical in both sources and is the one thing not in dispute.
 | E5 | `listFiles(appName)` | Implied. No route. | `gap` → 0015 |
 | E6 | `readFile(appName, path)` | Implied. No route. `path` traversal constraints undefined. | `gap` → 0015 |
 | E7 | `writeFile(appName, path, body)` | Implied. No route, no concurrency/etag story. | `gap` → 0015 |
-| E8 | `reembedFile(appName, path)` | Implied, and the spec insists save and re-embed are distinct actions. | `gap` → 0015 on the route. **Feasibility resolved `gali`:** per-file re-embedding *is* achievable — a CUSTOM data source ingests per document via `IngestKnowledgeBaseDocuments`, an upsert keyed on document id. The earlier "ingestion runs per data source" objection applies to an S3 data source, which is what the spec describes and not what Gali uses. |
+| E8 | `reembedFile(appName, path)` | Implied, and the spec insists save and re-embed are distinct actions. | `gap` → 0015 on the route. **Feasibility, final answer → 0030:** per-file re-embedding is achievable *only* via a CUSTOM data source, and the factory chooses **S3** (0030). `StartIngestionJob` takes no document, file, key or prefix parameter, so with an S3 source there is nowhere to name a file. `E8` therefore becomes `reingestKnowledgeBase(appName)` — an operation on the data source, not on the file row. The control label and placement are queued as Q32. |
 | E9 | `getIngestionStatus(appName, jobId)` | Implied by "show ingestion status including pending". | `gap` → 0015 |
 | E10 | provisioning status | Not in the spec and **not in the proposed surface** — but the App list cannot show `complete`/`partial`/`failed` without it. | `gap` → 0014, 0015 |
 | E11 | delete file | Nothing removes a knowledge file. | `gap` → 0015 |
@@ -170,7 +170,7 @@ Order is identical in both sources and is the one thing not in dispute.
 | U7 | Create app: stepped form → exactly one validated `AppConfig`; five SP parts as five labelled fields; live read-only composed preview the user never types into | `M1`, blocked by 0008/0009 |
 | U8 | Delete app: confirmation naming all four resources destroyed, app name typed to confirm | `M1`, and 0012 may make it five |
 | U9 | Data Center screen 1 — file list for a selected app | `M1` |
-| U10 | Data Center screen 2 — editor; save and re-embed as two distinct actions; ingestion status including pending | `M1`, feasibility → 0015 |
+| U10 | Data Center screen 2 — editor; save and re-embed as two distinct actions; ingestion status including pending | `M1`. → **0030**: still two actions, but their **scope differs** — save is per file, re-ingest is per app. One ingestion job per app at a time, so `pending` is a property of the app and the status UI gets simpler, not harder. Label and placement queued as Q32. |
 | U11 | Data Center screen 3 — new file from rule-based structure | **blocked** → 0010 |
 | U12 | UI copy carries the principle: content fixes are made in the markdown file and re-ingested, never patched into a prompt | `M1` |
 | U13 | Server Components by default, `"use client"` marked deliberately | `M1` |

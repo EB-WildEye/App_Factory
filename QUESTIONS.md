@@ -8,12 +8,13 @@ file carries the ask. Where both exist the ADR number is named.
 
 ---
 
-## Q1 - Which Bedrock data source id is current, PPIUPPCKNN or FDN4IETFFW
+## Q1 - Which Bedrock data source id is current, PPIUPPCKNN or FDN4IETFFW — CLOSED FOR THE FACTORY by draft ADR 0030; the production question stays open elsewhere
 Blocks: the factory's data-source contract, and `E8` per-file re-embedding. Nothing in Milestone 1 UI, but no provisioning step can be specified until it is settled.
 Options: (a) two data sources exist on KB CHAU7BWP4S, one CUSTOM (PPIUPPCKNN) and one S3 (FDN4IETFFW), both live; (b) FDN4IETFFW is stale config left over from the S3-sync era and the sync Lambda is dead code; (c) PPIUPPCKNN is stale and the scripts have not been run since.
 Recommendation: (a), and confirm it in the console. `scripts/ingest_kb.py` and `scripts/kb_verify_reconstruct.py` both target PPIUPPCKNN as CUSTOM, and the sync Lambda is still deployed and wired to S3 uploads under `documents/`, so both paths look alive.
 Read 2026-08-31, recorded and NOT acted on (you said this is being investigated elsewhere): `list-data-sources` on `CHAU7BWP4S` returns exactly one data source, `PPIUPPCKNN`; `get-data-source FDN4IETFFW` returns `ResourceNotFoundException`; and `list-knowledge-bases` returns exactly one KB in `eu-west-1`, so `FDN4IETFFW` is not a data source on some other KB either. That is evidence for option (b), not a decision. See `docs/gali-ground-truth.md` §9.4.
 Default taken for now: none. Both ids stay recorded side by side in `lib/gali/constants.ts` as `GALI_CUSTOM_DATA_SOURCE_ID` and `GALI_SYNC_DATA_SOURCE_ID`. No code picks one, and nothing was changed on the strength of the read.
+Closed for the factory 2026-09-01: draft ADR 0030 decides the factory provisions an **S3** data source, following the HTML spec, with no second path. That settles which door the factory uses and says nothing about which door production uses - that investigation is yours and nothing here acted on it.
 
 ## Q2 - The spec's five KB chunking/embedding values cannot be confirmed against Gali — ANSWERED 2026-08-31 by reading AWS: all five confirmed
 Blocks: the KB provisioning step, and the claim that generic-Gali reproduces Gali. Not Milestone 1 UI.
@@ -165,11 +166,12 @@ Options: (a) delete what exists, confirmation generated from real state, per-res
 Recommendation: (a). The confirmation exists to make the operator's model match reality before something irreversible; a dialog listing resources that do not exist teaches them the list is boilerplate, which is exactly what makes the type-the-name safeguard useless. (c) makes an unfinishable app permanently undeletable.
 Default taken for now: none. Worth deciding alongside it: the chat table holds patient conversations, and unlike Gali's `Retain` policy an SDK-created table has no protection at all.
 
-## Q26 - ADR 0027: the per-document KB metadata schema
+## Q26 - ADR 0027: the per-document KB metadata schema — MODEL DECIDED by EB 2026-08-31; the key-by-key split is now proposed
 Blocks: 0010, and therefore `dataFiles`.
 Options: (a) adopt Gali's 9 keys as the factory schema; (b) a generic five-key core plus a per-app extension; (c) copy all 9 verbatim including the two hard-coded values; (d) no metadata schema.
 Recommendation: (b). `gestational_age_max_weeks` is not a property of documents in general - a factory whose universal schema carries a gestational-age field has decided what kind of app it hosts. (c) is defensible if that is the honest answer, and that is your call to make.
-Default taken for now: none. The full 9-key schema and its validation rules are copied into `lib/gali/constants.ts` as a record of app #1. The question inside the question: **who may set the clinical booleans** - a creator who sets `contains_red_flags: false` on a haemorrhage document has made a safety error no schema can catch.
+Proposed split, awaiting your approval - full reasoning per key in ADR 0027. **Core:** `doc_type`, `topic_tags`, `language`, `source`, `version` (for the first two the *key* is core and the *vocabulary* is app-declared - that turned out to be the load-bearing distinction). **App-specific:** `gestational_age_max_weeks` (your decision), `procedure_type`, `contains_emotional_support`. **Closest call, low confidence: `contains_red_flags`** - proposed core because the spec's own `_FORMAT_AND_FLAGS` already names `[RED_FLAG]`, so escalation is an architecture-level concept; argued against because an app with nothing to escalate to carries a boolean that is false forever. The honest answer may be a third category, *conditionally core*, which the ADR does not currently have.
+Answered separately by you and now recorded in 0027: the data-entry person sets the clinical tags in the Data Center, and an agent pass reviews them and **surfaces disagreements to a human rather than overwriting**. That resolves the who-sets-the-booleans objection this question originally raised.
 
 ## Q27 - Should the AWS-read KB parameters become constants in lib/gali/constants.ts
 Blocks: nothing today. Blocks the KB provisioning step from being written against a single source, and it is how `euclidean` gets forgotten.
@@ -200,4 +202,10 @@ Blocks: ADR 0028's core mechanism, and it is coupled to a promise made to patien
 Options: (a) leave it at next midnight Asia/Jerusalem; (b) extend it to a few days, long enough that the backstop fires only after the digest has definitively failed and a human has looked; (c) remove the TTL and rely entirely on post-send deletion.
 Recommendation: (b), and the number is yours, not engineering's. (a) defeats the policy - a backstop that fires before the mechanism has run out of chances still destroys unsent conversations, which is exactly today's defect. (c) means a bug in the digest job retains patient data indefinitely, which is worse.
 Default taken for now: none, and nothing was changed. **The reason this is yours: Gali's own disclaimer tells the patient "the conversation is deleted after 24 hours and is not kept in the medical file". Lengthening the TTL without changing that sentence makes the product lie to the patient, and changing it is an ethics-committee matter.**
+
+## Q32 - What is the re-ingest control called, and where does it sit
+Blocks: Prompt 3, Data Center screen 2. Not the API - draft ADR 0030 settles that the operation is per data source.
+Options: (a) a single button above the file list, labelled `הטמעה מחדש של מאגר הידע` (re-ingest the knowledge base); (b) the same button in a per-app header or toolbar, away from the file rows entirely; (c) keep a per-file affordance that explains it re-ingests everything.
+Recommendation: (a) or (b), and definitely not (c). With an S3 data source `StartIngestionJob` has no file parameter, so a control on a file row would claim a scope the API cannot honour - and that is the kind of button that gets clicked twenty times. Save stays per file; re-ingest is per app, and the UI should make the asymmetry visible rather than hide it.
+Default taken for now: none - no UI exists yet. Recorded so Prompt 3 does not inherit the spec's per-file framing by accident. The Hebrew wording above is a suggestion for `lib/uiStrings.ts`, not a decision.
 
