@@ -273,23 +273,64 @@ duplicate being invisible until someone reads the console.
 
 ---
 
-## 8. CANNOT DETERMINE
+## 8. Open items, routed and grouped
 
-Neither the service models nor the reads answer these. None is guessed anywhere
-above.
+Revised 2026-09-01. Each item now says **how** it gets answered, and they are grouped
+so one action clears a whole group.
 
-| # | unknown | why it is not determinable here | who can answer |
-| - | ------- | ------------------------------- | -------------- |
-| 1 | Per-bucket index quota for S3 Vectors | Quotas are not in the service model and no API reports them | Service Quotas console or support. Decides shared-index vs index-per-app in ADR 0020 |
-| 2 | Whether `CreateIndex` can ever be slow enough to need polling | App #1's `GetIndex` has no `status` field, which is evidence but not a guarantee under load | First real run, or AWS docs |
-| 3 | Typical and worst-case duration of K-7 | Depends on corpus size and the embedding model's throughput | Measurement. Needed to size the polling interval and any timeout |
-| 4 | Whether the KB role can be scoped to an index-name prefix that Bedrock accepts | The trust and permission shapes are readable; whether a prefix wildcard on `s3vectors` index ARNs behaves as expected is not | A dry run in a scratch account, or ADR 0021 |
-| 5 | Whether `s3:GetObject` alone suffices, or `s3:GetObjectVersion` is also needed on a versioned bucket | App #1 has no S3 data source to copy; its own document bucket *is* versioned | AWS docs, or the first real S3-source ingestion |
-| 6 | What `statistics` in `GetIngestionJob` returns, field by field | Not read — no ingestion job was run | A real run; needed for the Data Center's ingestion-status UI (`E9`) |
-| 7 | Whether the factory should create one vector bucket per app or share one | See #1; it is a cost and quota question, not an API question | ADR 0020 |
-| 8 | Encryption: whether `AES256` is acceptable or a CMK is required | A hospital's data-classification rules are not in any API | EB / the ethics committee |
+**One is closed.** Item 6, what `GetIngestionJob` returns in `statistics`, needed no
+live run — it is in the service model. Seven counters:
+`numberOfDocumentsScanned`, `numberOfMetadataDocumentsScanned`,
+`numberOfNewDocumentsIndexed`, `numberOfModifiedDocumentsIndexed`,
+`numberOfMetadataDocumentsModified`, `numberOfDocumentsDeleted`,
+`numberOfDocumentsFailed` — all optional `long`. The job itself also carries
+`failureReasons`, `startedAt` and `updatedAt`. That is enough to build the Data Center's
+ingestion-status view (`E9`): documents scanned versus indexed versus failed, and a
+reason when it failed.
 
----
+### Group A — one AWS Service Quotas visit, or one support ticket
+
+Same page, same conversation. Clearing this group unblocks ADR 0020's remaining
+question.
+
+| # | item | why it decides something |
+| - | ---- | ------------------------ |
+| 1 | Per-vector-bucket index quota for S3 Vectors | decides shared index versus index-per-app |
+| 7 | One vector bucket per app, or one shared | the same question, seen from the other side |
+| — | DynamoDB table count limit for the account | step 5 fails at the ceiling, and the ceiling is per account |
+
+### Group B — one documentation read
+
+All four are in the Bedrock and S3 user guides. One sitting.
+
+| # | item | what to look for |
+| - | ---- | ---------------- |
+| 2 | Whether `CreateIndex` can be slow enough to need polling | app #1's `GetIndex` returns no `status` field, which is evidence but not a guarantee under load |
+| 5 | Whether `s3:GetObject` alone suffices, or `s3:GetObjectVersion` is also needed on a versioned bucket | app #1 has no S3 data source to copy, and its document bucket *is* versioned |
+| — | CloudFormation resource coverage for `AWS::Bedrock::KnowledgeBase`, `AWS::Bedrock::DataSource`, and S3 Vectors buckets and indexes | decides whether option C in `docs/provisioning-architecture-comparison.md` is viable at all. `cloudformation:DescribeType` returned **AccessDenied** for this IAM user, and no local resource spec, `sam` or `cfn-lint` is installed |
+| — | Step Functions and Lambda unit prices for `eu-west-1` | the comparison gives transition counts and deliberately no prices |
+
+### Group C — one live run in a scratch account
+
+These need something created, so they need a place where creating is safe. One
+end-to-end provision answers all three.
+
+| # | item | what the run measures |
+| - | ---- | --------------------- |
+| 3 | Typical and worst-case duration of the ingestion job | sizes the poll interval and any timeout — and it is the number that decides whether a Lambda orchestrator is viable at all |
+| 4 | Whether a prefix wildcard on `s3vectors` index ARNs is accepted as ADR 0021 (b) assumes | if it is not, the KB role has to be amended per app and 0021 reverts to (d) |
+| — | Whether the real `textPromptTemplate` limit is 4000, 4096, or higher | send templates of 4000, 4064 and 4097 characters and see which are refused. See Q43 — the three authorities disagree |
+
+### Group D — EB and the ethics committee, not a lookup
+
+| # | item | why it is not technical |
+| - | ---- | ---------------------- |
+| 8 | Whether `AES256` suffices for the vector store and the bucket, or a customer-managed key is required | a hospital's data-classification rules are not in any API |
+
+**Suggested order:** B first, because it is free and it may collapse option C in the
+orchestration comparison before any effort goes into it. Then A, because it is a
+five-minute console visit that settles 0020. Then C, which is the only group that costs
+real work. D can run in parallel with all of them.
 
 ## 9. What this recipe does not cover
 
