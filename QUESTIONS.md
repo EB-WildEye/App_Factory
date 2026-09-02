@@ -36,11 +36,12 @@ Options: (a) no top-level field - `_LANGUAGE` in the prompt parts is the only pl
 Recommendation: (b). They are two different things that happen to share a word. `_LANGUAGE` is prompt text telling the model which language to answer in - Gali's is 503 characters of grammar rules. UI locale decides `lang`/`dir` on the document. Collapsing them means a creator cannot have an RTL Hebrew shell around a multilingual assistant, which is exactly what Gali is.
 Default taken for now: none. The field is absent from `types/appConfig.ts`, and the strict zod schema **rejects** a config carrying it, so no code can start depending on either answer. A test pins that rejection.
 
-## Q5 - What is the precedence flag called, and where does it live
+## Q5 - What is the precedence flag called, and where does it live — ANSWERED by EB 2026-09-01: (a), AppConfig only
 Blocks: putting the ADR 0009 flag into `AppConfig`, and the create-form control for it. The 0009 amendment states the flag exists and that its name and home - `AppConfig`, the registry row, or both - are not settled.
 Options: (a) a field on `AppConfig` only, so it is part of the config the backend consumes; (b) an attribute on the registry row only, so it is operational state; (c) both, with `AppConfig` as the source and the row as a cache for the dashboards.
 Recommendation: (a). It changes the composed prompt, and the composed prompt is built from `AppConfig`. A registry attribute that can disagree with the config that produced the prompt is a two-sources-of-truth bug waiting for the first edit.
-Default taken for now: no field. `composeSystemPrompt` takes `{ renderPrecedenceText: boolean }` as an argument instead, so the behaviour is implemented and tested both ways while the field name stays unguessed. A function parameter is not a contract; a field name is.
+Resolved by (a). Implemented as `AppConfig.renderPrecedenceText`, a required boolean with **no schema default** - the default (on for new apps, off for Gali) belongs to the create form, and a schema default would silently turn an omitted field into "on" for any config assembled elsewhere, including Gali's. `composeSystemPrompt` now takes the config and reads the flag from it, replacing the argument workaround a caller could set inconsistently with the config the parts came from. ADR 0009 carries the amendment.
+Only the wire name is still open - Q40.
 
 ## Q6 - Where in the composed prompt does the precedence text go, and in which language
 Blocks: the exact bytes of every new app's prompt. Not Gali - its flag is off.
@@ -130,7 +131,7 @@ Default taken for now: none. `GALI_REGION` records Gali's region as a fact about
 Blocks: B4 and its rollback. No longer the largest cost decision in the factory, because the store turned out to have no capacity floor.
 Options, as they now stand: (a) one shared S3 Vectors index for all apps, separated by metadata filter; (b) one S3 Vectors index per app.
 Recommendation: (b), which reverses what this ADR originally recommended. The read killed the argument for sharing: the store is **`S3_VECTORS`**, not OpenSearch Serverless, and S3 Vectors has no minimum billed capacity — so per-app isolation, per-app deletion at teardown, and not having to get a metadata filter right all become nearly free. The four options the ADR originally weighed (shared OpenSearch, per-app OpenSearch, Aurora pgvector, third party) were the wrong four.
-Default taken for now: none. ADR 0020 carries the amendment and the withdrawn recommendation. One thing AWS cannot answer and that could push this back to (a): whether a single vector bucket has a per-bucket index quota. That is a limits question for the console or support.
+Default taken for now: none. **ADR 0020 was rewritten on the S3 Vectors basis on 2026-09-01**, not merely amended, and its new reasoning leads with correctness rather than cost: with one shared index, isolation depends on every query carrying the right metadata filter, and forgetting it once means one department's protocol answering for another's, silently. The superseded four-option reasoning is summarised there rather than deleted. One thing AWS cannot answer and that could push this back to (a): whether a single vector bucket has a per-bucket index quota. That is a limits question for the console or support.
 
 ## Q20 - ADR 0021: how does the KB get read access to each new bucket
 Blocks: B4 - without it, ingestion fails. Also decides whether 0006 is seven steps or eight.
@@ -144,11 +145,12 @@ Options: (a) increment on every write; (b) increment on an explicit publish; (c)
 Recommendation: (c) for the artefact, (b) for the event. A `v1`/`v2` counter in a bucket has no lock, so two simultaneous publishes either collide or silently overwrite. Worth knowing: the version has to be recorded on the conversation turn or none of this achieves its stated purpose, and Gali's turns expire at the next midnight anyway.
 Default taken for now: none. Gali has no versioned prompt artefact at all, so accepting this makes app #1 the first thing that would change - which routes straight back into Q17.
 
-## Q22 - ADR 0023: what are the valid uiTemplate values
+## Q22 - ADR 0023: what are the valid uiTemplate values — MODEL DECIDED by EB 2026-09-01 and implemented; only the member's NAME is still open
 Blocks: the create form's first field and its validation.
 Options: (a) a closed union of built template ids, validated as an enum; (b) a free string with a render-time fallback; (c) a template registry fetched from the backend.
 Recommendation: (a), starting with exactly one member. (b) moves the failure from the form, where the creator is present and can fix it, to render time, where the person affected is a patient - an app that looks right in the registry and renders as something else.
-Default taken for now: `z.string().min(1)`, marked BLOCKED. `clinic-rtl` appears in both spec examples and nowhere in either Gali repo, so it has not been adopted as a constant. Renaming a template later is a data migration, because the id lands in every registry row.
+Resolved by (a). `UI_TEMPLATE_IDS` is a closed enum with one member, `clinic-rtl`, and `uiTemplate` is `z.enum(UI_TEMPLATE_IDS)`. The value was adopted because it is what **both spec examples use** - the spec's word rather than a guess - and the spec is the source of truth for this repo.
+Still yours: **whether `clinic-rtl` is the right name.** Renaming it later is a data migration, because the id lands in every registry row. Also decided and implemented alongside it: colour is a **separate** field, so a palette change is not a template change. See ADR 0023, Q38, Q39, Q42.
 
 ## Q23 - ADR 0024: the admin authentication model
 Blocks: where the middleware seam goes. Not the implementation - that is out of scope this milestone.
@@ -156,11 +158,12 @@ Options: (a) a shared secret or basic auth at the middleware; (b) an OIDC provid
 Recommendation: (b) for mechanism plus (d) for model, with only the seam built now. If the factory can edit the knowledge base of a validated medical assistant then "who changed this file" needs an answer, and a shared secret cannot produce one - every action is attributable to everyone.
 Default taken for now: none - no middleware file exists yet. Flagged separately, not for this ADR: Gali's own `/chat` and `/history` endpoints have no authorizer at all.
 
-## Q24 - ADR 0025: appName validation, and the fact that it is permanent
+## Q24 - ADR 0025: appName validation, and the fact that it is permanent — MODEL DECIDED by EB 2026-09-01: (b), a derived bucket name
 Blocks: the create form's first field, its validation, and its help text.
 Options: (a) `appName` is the bucket name verbatim, validated against the full S3 rule; (b) `appName` is a slug and the bucket name is derived, as Gali already does; (c) verbatim plus a pre-flight availability check.
 Recommendation: (b). Under (a) an unrelated stranger's bucket named `gali` blocks that app name permanently, and the failure arrives at B1 rather than in the form. Gali's own bucket is `gali-documents-${StackName}-${AccountId}` - app #1 already solved this.
-Default taken for now: `z.string().min(1)`, marked BLOCKED. **Independent of which option wins: the create form has to say the name can never be changed.** It is both the S3 bucket name and the DynamoDB partition key (0007), and neither can be renamed. A permanent field that does not say so is a trap.
+Resolved by (b) - `appName` is a short identifier the creator types and the bucket name is derived from a fixed factory pattern. **The exact pattern and the `appName` rule are Q37**, so the schema still says `z.string().min(1)` and no constant was written: the pattern is a contract.
+Now binding rather than advisory: **the create form must say the name can never be changed.** It is both the source of a bucket name and the registry partition key (0007), and neither can be renamed. Recorded as checklist **U17**, including that on an existing app the field is absent and replaced by text rather than disabled - a disabled field still invites the question.
 
 ## Q25 - ADR 0026: what does deleting a partial app do
 Blocks: the delete confirmation copy and `deleteApp`'s return type.
