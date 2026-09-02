@@ -50,21 +50,23 @@ much as the argument in it, and nothing depends on it in code.
 | [0013](0013-rollback-ownership.md) | Rollback ownership on partial create | DRAFT |
 | [0014](0014-create-app-async-vs-sync.md) | createApp: 202 async vs synchronous ids | DRAFT |
 | [0015](0015-factory-api-route-shapes.md) | factoryApi route shapes | DRAFT |
-| [0016](0016-composed-prompt-length-cap.md) | Composed prompt has a hard 4096-character cap | accepted |
+| [0016](0016-composed-prompt-length-cap.md) | Composed prompt has a hard 4096-character cap | accepted, **cap contested — see Q43** |
 | [0017](0017-bun-test-as-test-runner.md) | Bun test as the test runner | accepted |
 | [0018](0018-gali-as-exception-or-migration.md) | Gali: exception, or migration to what the factory produces | DRAFT |
 | [0019](0019-factory-region.md) | The factory's AWS region | DRAFT |
-| [0020](0020-kb-vector-store.md) | The Knowledge Base vector store | DRAFT |
-| [0021](0021-kb-data-access-role.md) | The IAM role the KB uses to read an app's bucket | DRAFT |
+| [0020](0020-kb-vector-store.md) | The Knowledge Base vector store | DRAFT, **rewritten on S3 Vectors** |
+| [0021](0021-kb-data-access-role.md) | The IAM role the KB uses to read an app's bucket | DRAFT, **recommendation moved to (b)** |
 | [0022](0022-prompt-version-policy.md) | Who increments the prompt version, and when | DRAFT |
-| [0023](0023-ui-template-values.md) | The set of valid `uiTemplate` values | DRAFT |
+| [0023](0023-ui-template-values.md) | Templates and colour schemes are two separate fields | DRAFT on names; model DECIDED, **implemented** |
 | [0024](0024-admin-authentication-model.md) | The admin authentication model | DRAFT |
-| [0025](0025-app-name-and-bucket-naming-law.md) | `appName` is S3 naming law, and it is permanent | DRAFT |
+| [0025](0025-app-name-and-bucket-naming-law.md) | `appName`, and the derived bucket name | DRAFT on the pattern; model DECIDED |
 | [0026](0026-partial-app-delete-semantics.md) | Deleting a partial app | DRAFT |
 | [0027](0027-kb-document-metadata-schema.md) | The per-document KB metadata schema | DRAFT on the split; model DECIDED |
 | [0028](0028-daily-conversation-digest.md) | Daily conversation digest, deletion after a confirmed send | DRAFT; policy approved |
 | [0029](0029-validation-harness-as-factory-infrastructure.md) | The validation harness is factory infrastructure | DRAFT |
 | [0030](0030-s3-data-source-one-door.md) | One door: the factory provisions an S3 data source | DRAFT |
+| [0031](0031-two-terminal-failure-states.md) | Two terminal failure states: rolled back, and rollback incomplete | DRAFT |
+| [0032](0032-provisioning-error-dictionary.md) | The provisioning error dictionary | DRAFT; shape DECIDED |
 
 ## Coupled decisions
 
@@ -79,3 +81,6 @@ Accepting one of these without the others leaves the set inconsistent.
 | the knowledge base, revised | 0020, 0021, 0030 | the store is S3 Vectors, the door is S3, and an S3 door is what forces the role to read the bucket |
 | conversation retention | 0028, and Gali's patient-facing disclaimer | deletion after a confirmed send needs a longer TTL, and the TTL is a promise made to the patient |
 | lifecycle states | 0013, 0029 | provisioning state and validation state are two independent axes on the same registry row |
+| provisioning failure | 0006, 0013, 0031, 0032 | the step count, the two terminal states, and the code that says which step and why. `docs/provisioning-architecture-comparison.md` compares how each option expresses them |
+| the app's name, revised | 0007, 0019, 0021, 0025 | a derived bucket name from a fixed prefix is what lets the KB read permission be written once with a wildcard |
+| theming | 0023, and checklist U17 | template and colour are separate fields; the colour role set is closed and contrast is gated at save time |
