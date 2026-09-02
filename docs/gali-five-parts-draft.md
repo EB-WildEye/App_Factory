@@ -19,6 +19,18 @@ and every binding constraint of the live template.
 **The criterion is answer-equivalence, not byte-equivalence** (EB, 2026-08-31).
 Wording may change; what the model is instructed to do may not.
 
+> **Caveat added 2026-09-01, and it undercuts the headline number.** The 4096 cap this
+> document measures against is **contested**. The AWS API model declares the field Gali
+> uses — `generationConfiguration.promptTemplate.textPromptTemplate` — as
+> `max 4000`, while Gali's code asserts 4096 and production accepts 4064. See the note
+> at the top of ADR 0016 and `QUESTIONS.md` Q43.
+>
+> If the real limit is 4000, this draft's 4047 is **47 characters over**, not 49 under,
+> and the compressions below stop being optional. The mapping table and the fidelity
+> analysis are unaffected — they are about meaning, not length — but the budget table is
+> only as good as the cap. Nothing here has been re-cut on the strength of an
+> unconfirmed number.
+
 ## Measured budget
 
 Measured with the same rule `composeSystemPrompt` uses — the parts concatenated

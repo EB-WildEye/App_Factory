@@ -2,6 +2,46 @@
 
 Status: accepted
 Date: 2026-08-24
+**Contested 2026-09-01 — the number is not corroborated. See the note below before
+relying on 4096.**
+
+## Note, 2026-09-01 — the three authorities disagree
+
+The cap this ADR is built on has three sources and no two of them agree.
+
+| source | says | evidence |
+| ------ | ---- | -------- |
+| Gali's code | **4096** | `shared/shared/prompt.py:409` asserts `len(...) <= 4096` at import time |
+| the AWS API model | **4000** | `bedrock-agent-runtime` `2023-07-26`: shape `TextPromptTemplate` declares `min 1, max 4000` |
+| production behaviour | **at least 4064** | Gali's live template is 4064 characters and `/chat` works |
+
+The path was traced rather than assumed. The member Gali passes —
+`retrieveAndGenerateConfiguration.knowledgeBaseConfiguration.generationConfiguration.promptTemplate.textPromptTemplate`
+— resolves to `TextPromptTemplate`, max **4000**. The other template shape in the same
+model, `BasePromptTemplate`, does allow 100000, but it is referenced only by
+`PromptConfiguration.basePromptTemplate`, which is the agent-orchestration path and not
+this call. So the 4000 is the declared limit for exactly the field Gali uses.
+
+**What that means concretely:** Gali's live template is **64 characters over** the
+declared maximum and works anyway, and the five-part draft in
+`docs/gali-five-parts-draft.md` at 4047 is **47 over**. botocore does not enforce
+string maxima client-side, so the request is sent and the service accepts it — which
+means either the model's 4000 is stale, or the limit is documented but unenforced.
+
+**Nothing has been changed on the strength of this.** The constant stays 4096 in
+`lib/gali/constants.ts`, because that file records what Gali asserts and is generated
+from Gali's source; silently lowering it would assert a number that production
+contradicts, and silently raising the model's number would assert one AWS denies.
+
+What this does change is confidence: **this ADR's headroom arithmetic is only as good
+as its cap.** If the real limit is 4000, then app #1 is over it, the 32-character
+headroom this ADR relies on is actually a 64-character overrun, and the ADR 0009
+precedence flag is not merely tight for Gali but impossible. Queued as **Q43**, with
+the one experiment that would settle it named there.
+
+Credit where due: the discrepancy was surfaced by the parallel production
+investigation, `docs/gali_readonly_audit_2026-09-01.md`, and verified independently
+here against the service model.
 
 ## Context
 

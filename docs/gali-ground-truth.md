@@ -45,6 +45,12 @@ The spec's central claim is that the system prompt is assembled from five parts.
 | required placeholder | `$search_results$`, on its own line at the end | `shared/shared/prompt.py:378-379`, asserted at `:410` |
 | enforcement | `assert` at **import time**, so a bad edit cannot reach Lambda | `shared/shared/prompt.py:406-416` |
 
+**Caveat, 2026-09-01: the 4096 is contested.** The `bedrock-agent-runtime` service
+model declares the field Gali passes, `TextPromptTemplate`, as **max 4000** — so the
+live 4064-character template is 64 over the declared maximum and works anyway. Gali's
+own assert says 4096; production says at least 4064; AWS says 4000. Nothing here has
+been changed on the strength of it. See ADR 0016's note and `QUESTIONS.md` Q43.
+
 Two of those numbers matter to the factory. 4096 is the cap ADR 0016 records.
 **32 is how much room app #1 has left** — the factory cannot add a single
 sentence to Gali's prompt without breaking it, which is why the ADR 0009
