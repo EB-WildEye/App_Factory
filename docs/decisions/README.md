@@ -74,7 +74,7 @@ successor.
 | [0003](0003-gui-first.md) | GUI built first, its output is the backend spec | accepted |
 | [0004](0004-nextjs-bun-over-vite.md) | Next.js + Bun over Vite | accepted |
 | [0005](0005-bff-over-browser-to-api-gateway.md) | BFF over browser-to-API-Gateway | accepted |
-| [0006](0006-backend-step-count-7-vs-6.md) | Backend step count: 7 vs 6 | DRAFT |
+| [0006](0006-backend-step-count-7-vs-6.md) | Backend step count: 7 vs 6 | DRAFT — **settled by 0037: eleven** |
 | [0007](0007-registry-row-field-names.md) | Registry row field names | **SUPERSEDED by 0036** |
 | [0008](0008-appconfig-field-names.md) | AppConfig field names and casing | accepted |
 | [0009](0009-rules-placement.md) | Where `rules` live | accepted; **item 3 superseded by 0035** |
@@ -105,6 +105,7 @@ successor.
 | [0034](0034-kb-read-access-shared-role-prefix.md) | KB read access: one shared role with a prefix wildcard | DRAFT — supersedes 0021 |
 | [0035](0035-precedence-text-per-app-flag.md) | The precedence text is a per-app flag, off for app #1 | accepted — supersedes 0009 item 3 |
 | [0036](0036-factory-registry-row.md) | The factory registry row, whole | accepted for 0007's five attributes; DRAFT for the rest — supersedes 0007 |
+| [0037](0037-lambda-orchestrator.md) | Provisioning runs on a Lambda orchestrator | DRAFT; the choice is DECIDED |
 
 ## Coupled decisions
 
@@ -119,6 +120,6 @@ Accepting one of these without the others leaves the set inconsistent.
 | the knowledge base, revised | 0033, 0034, 0030 | the store is S3 Vectors, the door is S3, and an S3 door is what forces the role to read the bucket |
 | conversation retention | 0028, and Gali's patient-facing disclaimer | deletion after a confirmed send needs a longer TTL, and the TTL is a promise made to the patient |
 | lifecycle states | 0013, 0029, 0036 | provisioning state and validation state are two independent axes on the same registry row |
-| provisioning failure | 0006, 0013, 0031, 0032 | the step count, the two terminal states, and the code that says which step and why. `docs/provisioning-architecture-comparison.md` compares how each option expresses them |
+| provisioning failure | 0013, 0031, 0032, 0037 | the step count, the two terminal states, and the code that says which step and why. `docs/provisioning-architecture-comparison.md` compares how each option expresses them |
 | the app's name, revised | 0019, 0025, 0034, 0036 | a derived bucket name from a fixed prefix is what lets the KB read permission be written once with a wildcard |
 | theming | 0023, and checklist U17 | template and colour are separate fields; the colour role set is closed and contrast is gated at save time |

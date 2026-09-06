@@ -1,8 +1,16 @@
 # 0006 — Backend step count: seven or six
 
-Status: DRAFT — not accepted. EB decides.
+Status: DRAFT — **settled by ADR-0037, which counts eleven steps.**
 Date: 2026-08-23
 Recommendation added: 2026-08-31
+Settled: 2026-09-06 — ADR-0037 enumerates the real sequence as **S0-S10, eleven steps**.
+Neither candidate answer here was right, because both were counting the wrong thing: the
+`kb/` upload was missing from every count, and two steps (the registry row written first,
+and the vector index) did not exist when this ADR was written.
+
+> Edited in place rather than superseded, because this ADR was never accepted — which the
+> supersession rule permits. Its analysis of compensating actions is still useful and is
+> carried forward by 0037 §4.
 
 ## Context
 

@@ -72,11 +72,12 @@ Default taken for now: absent from `WireAppConfig`. The serializer carries only 
 Each entry below has a draft ADR carrying the full analysis. The ADR number is
 named; what is here is the two-line version.
 
-## Q10 - ADR 0006: is the backend seven steps or six
+## Q10 - ADR 0006: is the backend seven steps or six — ANSWERED 2026-09-06: neither, it is eleven
 Blocks: nothing in Milestone 1 UI. Blocks 0013's rollback coverage, because a step no count knows about is an orphan nobody deletes.
 Options: (a) seven, and the live-flow lede miscounts by counting F4 twice; (b) six, B7 is outside the sequence because it is TBD; (c) there is a real eighth step, the KB's IAM role.
 Recommendation: (a). The spec's own `FLOW` data contains B1-B7, so (b) requires believing the artefact lists a step the spec does not intend. Decide 0021 first - it is the test of whether (c) is true.
-Default taken for now: none. The checklist keeps B1-B7 and no code depends on the count.
+Resolved by **ADR-0037**: the real sequence is S0-S10, eleven steps, each with the spec artefact or ADR it comes from. Option (c) - that there was a real extra step - turned out closest to true, though not for the reason offered: the missing steps were the `kb/` upload, the registry row written first, and the vector index, not the IAM role. 0034 removes the IAM write from the create path entirely, so there is no IAM step to count.
+0006 is edited in place rather than superseded, because it was never accepted.
 
 ## Q11 - ADR 0010: what structure must a creator supply for a data file
 Blocks: `AppConfig.dataFiles`, Data Center screen 3, and any "ready to create" validation gate. Screens 1 and 2 are not blocked.
@@ -214,23 +215,25 @@ Options: (a) a single button above the file list, labelled `הטמעה מחדש 
 Recommendation: (a) or (b), and definitely not (c). With an S3 data source `StartIngestionJob` has no file parameter, so a control on a file row would claim a scope the API cannot honour - and that is the kind of button that gets clicked twenty times. Save stays per file; re-ingest is per app, and the UI should make the asymmetry visible rather than hide it.
 Default taken for now: none - no UI exists yet. Recorded so Prompt 3 does not inherit the spec's per-file framing by accident. The Hebrew wording above is a suggestion for `lib/uiStrings.ts`, not a decision.
 
-## Q33 - How is provisioning orchestration implemented
+## Q33 - How is provisioning orchestration implemented — ANSWERED by EB 2026-09-02: (b), a Lambda orchestrator
 Blocks: the whole provisioning backend. Nothing in Milestone 1 UI, which talks to a mock.
 Options: (a) AWS Step Functions Standard; (b) a Lambda orchestrator with its state in DynamoDB and a resume schedule; (c) a CloudFormation stack per app; (d) EventBridge choreography - found and rejected in the comparison, because no single place knows the in-flight state.
 Recommendation: (a). Full reasoning in `docs/provisioning-architecture-comparison.md`. The deciding argument is the requirement that motivated the comparison - what happens when the rollback itself fails - and only (a) has a primitive for it: `RedriveExecution` restarts a failed execution **from the failed state**, keeping its history, with `redriveCount` and `PENDING_REDRIVE` visible in `DescribeExecution`. Verified in the service model, not recalled. In (b) that path is code nobody has exercised; in (c) it is a stuck stack and a console session.
-Default taken for now: none, nothing implemented. The costs are stated in the document: ASL is a second language in the repo, local end-to-end testing is worse than (b), and Standard billing is per state transition so the poll interval becomes a cost parameter that must be chosen rather than defaulted. Re-examine (c) if either of two things changes - the `DeletionPolicy` trap, where one knob cannot serve both "clean up a failed create" and "never destroy patient conversations"; or the unverified question of whether CloudFormation has resource types for the Bedrock KB, the data source and the S3 Vectors index at all.
+Resolved by (b), drafted as **ADR-0037**. Written for the decision rather than for the recommendation: the comparison's five arguments for Step Functions became 0037's requirements list, and its section 7 states what is lost with a mitigation and an honest verdict on each - execution history is the one that is genuinely not recovered.
+The costs originally stated for (a) are moot; the costs of (b) are in 0037. From the comparison: ASL is a second language in the repo, local end-to-end testing is worse than (b), and Standard billing is per state transition so the poll interval becomes a cost parameter that must be chosen rather than defaulted. Re-examine (c) if either of two things changes - the `DeletionPolicy` trap, where one knob cannot serve both "clean up a failed create" and "never destroy patient conversations"; or the unverified question of whether CloudFormation has resource types for the Bedrock KB, the data source and the S3 Vectors index at all.
 
-## Q34 - Is uploading the kb/ objects a step in its own right
+## Q34 - Is uploading the kb/ objects a step in its own right — ANSWERED 2026-09-06 by ADR-0037: yes, (a)
 Blocks: the rollback list, and ADR 0006's step count. Not Milestone 1 UI.
 Options: (a) a step of its own, making the sequence eight; (b) it folds into the bucket step, which then means "create the bucket and populate it"; (c) it folds into the data source step, since 0030 makes it a precondition of ingestion.
 Recommendation: (a). The seven-step list omits it and the spec has it as B2. It creates real resources with their own compensating action, and under 0030 it must complete before ingestion reads the prefix - so a create that fails at the knowledge base strands **objects**, not just a bucket, which is a rollback-list item the seven-step framing loses.
-Default taken for now: the comparison document lists it as step **1b** rather than silently renumbering, so no count is asserted. Same ambiguity ADR 0006 is already open about; settle them together.
+Resolved by (a). ADR-0037 settles the sequence as **eleven steps, S0-S10**, with the `kb/` upload as **S2** in its own right. Settled together with ADR 0006's count question, as this entry asked: neither of 0006's candidate answers was right, because both were counting a sequence that was missing this step and did not yet contain the registry-row-first step or the vector index.
 
-## Q35 - What detects a create whose rollback never ran at all
+## Q35 - What detects a create whose rollback never ran at all — ADDRESSED by ADR-0037 as a side effect; the threshold is still yours
 Blocks: nothing today. It is the hole ADR 0031 leaves, stated rather than hidden.
 Options: (a) a per-execution timeout that forces a terminal state; (b) a scheduled sweeper that finds rows stuck in `provisioning` past a threshold; (c) both.
 Recommendation: (c). If the orchestrator dies between the failure and the rollback, the row sits in `provisioning` forever and **neither** terminal state in 0031 is reached, so no operator is ever told. A timeout inside the orchestration cannot cover the case where the orchestration itself is gone - which is exactly the case that needs covering.
-Default taken for now: none. Recorded in 0031's Consequences as the one hole it does not close.
+Addressed by ADR-0037 §2: the SQS backstop is an EventBridge **sweeper** that re-enqueues rows whose `updated_at` has gone stale while the status is `pending` or `provisioning`. It exists to cover a lost SQS message, and it covers a dead orchestrator for free - which is exactly this hole. That is option (c), both mechanisms, arrived at for an independent reason.
+Still yours: **the staleness threshold**, and whether the sweeper re-enqueues silently or also alarms. A threshold too short re-enqueues healthy long-running ingestions; too long and a dead create sits unnoticed. It cannot be chosen without the S7 duration measurement in Group C of the provisioning recipe.
 
 ## Q36 - Approve the error dictionary, and how hard should ValidationException be parsed
 Blocks: the mapping module and the Hebrew copy per code. The shape is already yours; this is the contents.
