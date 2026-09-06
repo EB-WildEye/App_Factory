@@ -106,6 +106,7 @@ successor.
 | [0035](0035-precedence-text-per-app-flag.md) | The precedence text is a per-app flag, off for app #1 | accepted — supersedes 0009 item 3 |
 | [0036](0036-factory-registry-row.md) | The factory registry row, whole | accepted for 0007's five attributes; DRAFT for the rest — supersedes 0007 |
 | [0037](0037-lambda-orchestrator.md) | Provisioning runs on a Lambda orchestrator | DRAFT; the choice is DECIDED |
+| [0038](0038-create-form-draft-persistence.md) | The create form remembers its own draft | DRAFT; the policy is DECIDED |
 
 ## Coupled decisions
 
@@ -122,4 +123,5 @@ Accepting one of these without the others leaves the set inconsistent.
 | lifecycle states | 0013, 0029, 0036 | provisioning state and validation state are two independent axes on the same registry row |
 | provisioning failure | 0013, 0031, 0032, 0037 | the step count, the two terminal states, and the code that says which step and why. `docs/provisioning-architecture-comparison.md` compares how each option expresses them |
 | the app's name, revised | 0019, 0025, 0034, 0036 | a derived bucket name from a fixed prefix is what lets the KB read permission be written once with a wildcard |
+| the create form | 0023, 0025, 0038, and checklist U16/U17 | what the form collects, what it validates at save time, what it remembers, and the two fields whose copy is binding |
 | theming | 0023, and checklist U17 | template and colour are separate fields; the colour role set is closed and contrast is gated at save time |

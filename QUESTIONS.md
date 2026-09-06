@@ -314,3 +314,21 @@ The cause: 0007 put the registry row at step B6 and said "the app becomes real h
 Options: (a) `listApps()` returns everything and the UI filters; (b) it returns only `complete`, with failures behind a separate call or an explicit filter; (c) it returns everything except `pending`, on the grounds that a `pending` row is seconds old and not yet interesting.
 Recommendation: (b) as the default with an explicit opt-in for the rest. A dashboard whose default view is "every app plus every failed attempt since launch" gets ignored, and the failures are worth seeing deliberately rather than mixed in. But this is a product judgement about what the Admin Dashboard is for, so it is yours.
 Default taken for now: none. ADR-0036 records the consequence and 0015 has not been accepted, so no route contract has been committed to.
+
+## Q47 - How old is too old for a create-form draft
+Blocks: the expiry constant in ADR 0038. Nothing else.
+Options: (a) 7 days; (b) 24 hours; (c) 30 days; (d) no expiry, cleared only on a successful create or by hand.
+Recommendation: (a). The case being served is hours to days - a shift ended, a meeting interrupted. (c) leaves clinical prose in `localStorage` on a shared workstation for a month to serve a case that almost never happens; (d) leaves it forever. (b) is defensible and would lose real work for anyone who fills the form across two days, which is likely for a five-part prompt.
+Default taken for now: none - no constant written. This is a trade between convenience and exposure on a machine the factory does not control, which makes it yours rather than an engineering default. Related and already decided by you: knowledge files are never persisted at all, so what expires is text, not clinical documents.
+
+## Q48 - One draft or several, and is a draft id in the URL acceptable
+Blocks: the storage key, and whether the form can offer a choice of drafts.
+Options: (a) a single draft under one fixed key - simplest, and a second create silently overwrites the first; (b) key on `appName` - it is empty when the form opens and changes while being typed, so it either does not exist yet or multiplies a draft per keystroke; (c) a minted `draftId` carried in the URL as `/apps/new?draft=<id>`, plus an index of live drafts.
+Recommendation: (c). On a shared clinical workstation two people starting two apps is likely rather than hypothetical, and under (a) the first one's work disappears with no trace. The URL is what makes a reload deterministic and gives each tab its own draft, which also defuses the cross-tab write contention that ignoring `storage` events otherwise leaves.
+Default taken for now: none - no UI exists. The costs of (c) are stated in 0038: an index that can drift from the drafts it lists, so the sweep must treat the drafts as truth and the index as a rebuildable cache; and a shared link carries a draft reference meaningless in another browser, which must read as "draft not found" rather than as an error.
+
+## Q49 - Should drafts move server-side once authentication exists
+Blocks: nothing now. It decides whether ADR 0038 is a permanent design or a stopgap, and 0038 records it as a stopgap.
+Options: (a) keep browser storage permanently; (b) move to a server-side draft keyed to an authenticated creator once 0024 lands, and retire the local one; (c) both - local as an offline cache in front of a server draft.
+Recommendation: (b). A server-side draft is better on every axis that matters here: it survives a machine change, it leaves nothing on a shared workstation, and it could hold the knowledge files properly - which is the one thing 0038 has to refuse. It is blocked only because there is no authentication, so there is no identity to key a draft to, and a draft keyed to nothing is worse than a local one. (c) is the version that sounds thorough and doubles the number of places a draft can be stale.
+Default taken for now: (a) by necessity, and recorded in 0038 as the intended successor rather than as the answer. Worth deciding at the same time as 0024, because the auth model decides whether a draft belongs to a person or to a workstation.
