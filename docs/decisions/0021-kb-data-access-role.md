@@ -1,41 +1,19 @@
 # 0021 — The IAM role the Knowledge Base uses to read an app's bucket
 
-Status: DRAFT — not accepted. EB decides.
+Status: SUPERSEDED by ADR-0034
 Date: 2026-08-31
-Revised: 2026-09-01. **The recommendation below should change from (d) to (b),
-because 0025's derived bucket pattern removed the argument for (d).** See the note
-immediately after this header, then read the options with that in mind.
+Superseded: 2026-09-03 — ADR 0025's derived bucket pattern gave every factory bucket a
+fixed prefix, which let the KB's read permission be written once with a wildcard and
+made this ADR's recommendation the more expensive of two equals.
 
-## Revision note, 2026-09-01 — the recommendation moves to (b)
-
-EB decided (0025) that the bucket name is derived from a **fixed factory pattern**,
-`appfactory-<appName>-<accountId>`. That changes this ADR's arithmetic.
-
-This ADR recommended **(d)**, a bucket policy per new bucket, to avoid mutating shared
-state on every create. With a fixed prefix, **(b)** — one shared role whose policy
-carries a naming-prefix wildcard — has the same shared-state property, namely none,
-and needs no per-app write at all:
-
-```
-s3:GetObject   on  arn:aws:s3:::appfactory-*-<accountId>/kb/*
-s3:ListBucket  on  arn:aws:s3:::appfactory-*-<accountId>
-```
-
-Written once at platform setup, never touched by a create. No policy-size ceiling, no
-lost-update race between concurrent creates, no rollback action, and one less thing a
-half-finished create can leave behind. The wildcard sits **between** two fixed
-segments, so it can match neither another account's bucket nor a bucket the factory
-did not name.
-
-(d) is not wrong — it writes to the app's own resource, so it never had (a)'s
-shared-state problem — but it is now strictly more work for the same guarantee. The
-only remaining argument for keeping a bucket policy as well is **defence in depth**,
-and it should be decided on that basis rather than on the shared-state grounds used
-below, which no longer apply.
-
-Consequence for the sequence: under (b) there is **no IAM or bucket-policy write in
-the create path at all**, so the eighth-step question this ADR raised against 0006
-resolves to "seven stands" more cleanly than (d) achieved.
+> **This text is the record of what was decided on 2026-08-31 and is preserved
+> unaltered. Do not act on it.** It recommends option (d), a bucket policy per new
+> bucket. The current answer is option (b), in
+> [ADR-0034](0034-kb-read-access-shared-role-prefix.md).
+>
+> A revision note was prepended to this file in place on 2026-09-01; it has been
+> removed and the original restored from commit `8cc3365`, because the supersession
+> rule now forbids editing an ADR to say something else.
 
 Checklist row `N3` / `P5`. A gap, and the candidate eighth provisioning step in
 0006.

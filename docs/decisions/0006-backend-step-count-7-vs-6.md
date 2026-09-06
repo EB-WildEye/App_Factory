@@ -74,12 +74,13 @@ frontend lane *and* as the handoff. Option 2 would require believing that the
 `FLOW` data lists a step the spec does not intend, which is a stranger claim than
 a wrong sentence.
 
-Rider 1 — **option 3 is not disposed of, it is deferred to 0021.** The candidate
+Rider 1 — **option 3 is not disposed of, it is deferred to 0021, now superseded by ADR-0034.** The candidate
 eighth step is the IAM role the Bedrock KB needs to read a new bucket. That role
 is required for ingestion to work at all and it appears in no count, no card and
-no flow station. If 0021 concludes the factory must create a role or policy per
+no flow station. If ADR-0034 concludes the factory must create a role or policy per
 app, the count is eight and this ADR has to be reopened. So: accept seven now,
-and treat 0021 as the test of whether seven is final.
+and treat ADR-0034 as the test of whether seven is final. (Under 0034's recommendation
+there is no IAM write in the create path at all, so seven stands.)
 
 Rider 2 — **fix B3's rollback wording while the count is being settled.** B3
 writes `prompt/v1.txt` and appears in no registry row, so it is the step most
@@ -101,4 +102,4 @@ orphan nobody deletes.
 If the recommendation is accepted: the checklist's step table stays at B1–B7, the
 spec's live-flow lede is recorded as a known error rather than a second opinion,
 and 0013's rollback work has seven compensating actions to cover, not six. If
-0021 later adds an IAM step, both this ADR and 0013 change together.
+ADR-0034 later adds an IAM step, both this ADR and 0013 change together.

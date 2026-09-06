@@ -141,7 +141,7 @@ step lagging the send by a day rather than following it within the same run.
   verified once. Gali carries both `SenderEmail` and `RecipientEmail` as stack
   parameters; only the recipient varies per app, and only the recipient is a
   creator-facing choice.
-- **A new platform table**, `digest-sends`, alongside 0020's vector store and 0021's
+- **A new platform table**, `digest-sends`, alongside 0033's vector store and 0021's
   KB role in the set of things that must exist before app #1. The factory's platform
   surface is now three items the spec never mentions.
 - **The chat-history TTL becomes a policy input rather than a constant**, and the

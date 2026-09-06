@@ -117,7 +117,7 @@ decision, but it is also not mine to invent.
   already written that way in `docs/kb-provisioning-recipe.md`.
 - **The KB service role needs `s3:GetObject` and `s3:ListBucket`** on the app bucket.
   App #1's role has neither, because a CUSTOM source is pushed to rather than read
-  from. That is draft ADR 0021's question, and this decision is what makes it
+  from. That is ADR-0034's question (superseding 0021), and this decision is what makes it
   unavoidable.
 - Checklist `R5`, `R6`, `E8`, `U10` and `U11` all move: the spec's description becomes
   correct for the factory, and the per-file re-embedding row becomes a per-data-source

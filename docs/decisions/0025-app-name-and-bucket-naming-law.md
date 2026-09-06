@@ -95,7 +95,7 @@ It also satisfies two constraints that are not S3's:
   digits and inner hyphens. Satisfied.
 - **DynamoDB table name** for `<appName>-chat`: ≤ 255. Satisfied trivially.
 
-## What this changes about ADR 0021 — it reverses its recommendation
+## What this changes about ADR 0021 — it superseded it
 
 This is the consequence EB asked to have recorded, and it goes further than expected.
 
@@ -140,14 +140,15 @@ reasoning:
   so it cannot match a bucket in another account and cannot match a bucket that the
   factory did not name.
 
-So: **0021 should move from (d) to (b).** A note to that effect has been added to
-0021, which remains a draft. The remaining argument for also having a bucket policy is
+So: **0021 moved from (d) to (b)** — and under the supersession rule adopted 2026-09-03
+that is a change of answer, so 0021 keeps its text and is **superseded by ADR-0034**,
+which carries (b) and names this ADR as the cause. The remaining argument for also having a bucket policy is
 defence in depth, and it should be decided on that basis rather than on the
 shared-state grounds 0021 originally used — those no longer apply.
 
 Knock-on: step K-1 of `docs/kb-provisioning-recipe.md` currently pairs `CreateBucket`
 with `PutBucketPolicy`. Under (b) the policy write disappears from the create path.
-The recipe has been annotated rather than rewritten, because 0021 is still a draft.
+The recipe is annotated rather than rewritten, because 0034 is still a draft.
 
 ## Consequences
 

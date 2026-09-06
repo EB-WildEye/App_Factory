@@ -360,12 +360,12 @@ Rows 7 and 9 are the two that matter.
 **S3 Vectors.** The vector store is `S3_VECTORS` — index
 `arn:aws:s3vectors:eu-west-1:[redacted:account-id]:bucket/[redacted:vector-bucket]/index/[redacted:vector-index]`,
 in vector bucket `[redacted:vector-bucket]`, both created 2026-04-19,
-`AES256`. Draft ADR 0020 offered four options — shared OpenSearch Serverless,
+`AES256`. ADR 0020 offered four options — shared OpenSearch Serverless,
 per-app OpenSearch Serverless, Aurora pgvector, a managed third party — and the
 real answer is none of them. That matters beyond being wrong: 0020's whole cost
 argument was built on OpenSearch Serverless having a minimum billed capacity per
-collection, and S3 Vectors has no such floor. The recommendation in 0020 has been
-amended accordingly.
+collection, and S3 Vectors has no such floor. 0020 is therefore **superseded by
+ADR-0033**, which recommends one index per app.
 
 **Euclidean, not cosine.** `distanceMetric: euclidean`. Nothing in the spec, the
 build plan or any ADR mentions a distance metric, and cosine is the more common
@@ -401,8 +401,8 @@ s3vectors:GetIndex  QueryVectors  PutVectors  GetVectors  DeleteVectors
 
 **There is no `s3:GetObject` and no `s3:ListBucket` anywhere in this role.** That
 is not an omission — a CUSTOM data source is pushed to, so the KB never reads S3.
-An S3 data source, which is what the spec describes and what draft ADR 0021 was
-written about, needs both. So 0021's question is real for the factory and simply
+An S3 data source, which is what the spec describes and what ADR 0021 and its successor
+ADR-0034 are about, needs both. So that question is real for the factory and simply
 does not arise for app #1.
 
 ### 9.4 The second data source id does not exist

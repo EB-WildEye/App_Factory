@@ -121,6 +121,40 @@ here contradicts them.
    repo carried a linter it could not run until `07258cc` supplied the config and
    the script.
 
+## DECISIONS
+
+Binding, effective 2026-09-03.
+
+**An ACCEPTED ADR is never rewritten to say something else.** When the answer
+changes, the old ADR keeps its text and gains two lines:
+
+```
+Status: SUPERSEDED by ADR-00xx
+Superseded: <date> - <one line on why>
+```
+
+and a **new** ADR is written carrying:
+
+```
+Supersedes: ADR-00xx
+```
+
+plus a section saying **what changed, and what caused the change** — the fact, the
+reading or the decision that made the old answer wrong. Not just the new answer: the
+thing that moved.
+
+- A **DRAFT that was never accepted** may still be edited in place.
+- **Additions that do not contradict stay amendments.** A consequence discovered
+  later, a value read out of a system, a knock-on nobody had noticed — those are
+  amendments, dated, appended.
+- **Only a change of answer requires supersession.**
+
+The reason is that a decision log is evidence, not documentation. Its value is that
+it records what was believed and when, so that a later reader can tell a decision
+that was right at the time from one that was wrong all along. An ADR edited to agree
+with the present tense has destroyed exactly that, and it destroys it silently —
+nothing in the file says it used to say something else.
+
 ## CODE CONVENTIONS
 
 Binding on every task in this repo.

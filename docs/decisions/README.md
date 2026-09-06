@@ -5,7 +5,7 @@ was taken (not the order it was written down). Every file has the same five
 headings:
 
 ```
-Status: accepted | open | DRAFT | superseded by NNNN
+Status: accepted | open | DRAFT | SUPERSEDED by ADR-00xx
 Date: YYYY-MM-DD
 
 ## Context
@@ -19,6 +19,40 @@ A **DRAFT** carries a `## Recommendation` in place of `## Reasoning`: the analys
 is written up and a pick is argued for, but `## Decision` stays open until EB
 accepts it. A draft is not a soft accept — the recommendation is worth exactly as
 much as the argument in it, and nothing depends on it in code.
+
+## Supersession
+
+Binding, effective 2026-09-03. Also in `CLAUDE.md` under `## DECISIONS`.
+
+**An ACCEPTED ADR is never rewritten to say something else.** When the answer changes,
+the old ADR keeps its text and gains:
+
+```
+Status: SUPERSEDED by ADR-00xx
+Superseded: <date> - <one line on why>
+```
+
+and a **new** ADR is written carrying:
+
+```
+Supersedes: ADR-00xx
+```
+
+plus a section saying **what changed, and what caused the change** - the fact, reading
+or decision that made the old answer wrong.
+
+- A **DRAFT that was never accepted** may still be edited in place.
+- **Additions that do not contradict stay amendments** - dated, appended, in place.
+- **Only a change of answer requires supersession.**
+
+Why: a decision log is evidence, not documentation. Its value is that it records what
+was believed and when, so a later reader can tell a decision that was right at the time
+from one that was wrong all along. An ADR edited to agree with the present tense has
+destroyed that, and destroyed it silently.
+
+**How to read a superseded ADR:** its text is what was decided then, and it is still
+the honest record of that moment. Do not act on it. Follow the `Status` line to its
+successor.
 
 ## Rules
 
@@ -43,7 +77,7 @@ much as the argument in it, and nothing depends on it in code.
 | [0006](0006-backend-step-count-7-vs-6.md) | Backend step count: 7 vs 6 | DRAFT |
 | [0007](0007-registry-row-field-names.md) | Registry row field names | accepted |
 | [0008](0008-appconfig-field-names.md) | AppConfig field names and casing | accepted |
-| [0009](0009-rules-placement.md) | Where `rules` live | accepted |
+| [0009](0009-rules-placement.md) | Where `rules` live | accepted; **item 3 superseded by 0035** |
 | [0010](0010-data-file-structure.md) | Data file structure a creator must supply | DRAFT |
 | [0011](0011-disclaimer-format-and-storage.md) | Disclaimer format and storage | DRAFT |
 | [0012](0012-subdomain-record-and-certificate.md) | Subdomain record type and certificate | DRAFT |
@@ -54,8 +88,8 @@ much as the argument in it, and nothing depends on it in code.
 | [0017](0017-bun-test-as-test-runner.md) | Bun test as the test runner | accepted |
 | [0018](0018-gali-as-exception-or-migration.md) | Gali: exception, or migration to what the factory produces | DRAFT |
 | [0019](0019-factory-region.md) | The factory's AWS region | DRAFT |
-| [0020](0020-kb-vector-store.md) | The Knowledge Base vector store | DRAFT, **rewritten on S3 Vectors** |
-| [0021](0021-kb-data-access-role.md) | The IAM role the KB uses to read an app's bucket | DRAFT, **recommendation moved to (b)** |
+| [0020](0020-kb-vector-store.md) | The Knowledge Base vector store | **SUPERSEDED by 0033** |
+| [0021](0021-kb-data-access-role.md) | The IAM role the KB uses to read an app's bucket | **SUPERSEDED by 0034** |
 | [0022](0022-prompt-version-policy.md) | Who increments the prompt version, and when | DRAFT |
 | [0023](0023-ui-template-values.md) | Templates and colour schemes are two separate fields | DRAFT on names; model DECIDED, **implemented** |
 | [0024](0024-admin-authentication-model.md) | The admin authentication model | DRAFT |
@@ -67,6 +101,9 @@ much as the argument in it, and nothing depends on it in code.
 | [0030](0030-s3-data-source-one-door.md) | One door: the factory provisions an S3 data source | DRAFT |
 | [0031](0031-two-terminal-failure-states.md) | Two terminal failure states: rolled back, and rollback incomplete | DRAFT |
 | [0032](0032-provisioning-error-dictionary.md) | The provisioning error dictionary | DRAFT; shape DECIDED |
+| [0033](0033-kb-vector-store-s3-vectors.md) | KB vector store is S3 Vectors, one index per app | DRAFT — supersedes 0020 |
+| [0034](0034-kb-read-access-shared-role-prefix.md) | KB read access: one shared role with a prefix wildcard | DRAFT — supersedes 0021 |
+| [0035](0035-precedence-text-per-app-flag.md) | The precedence text is a per-app flag, off for app #1 | accepted — supersedes 0009 item 3 |
 
 ## Coupled decisions
 
@@ -76,11 +113,11 @@ Accepting one of these without the others leaves the set inconsistent.
 | ----- | ---- | --- |
 | provisioning lifecycle | 0006, 0013, 0014, 0015, 0026 | the step count, the state vocabulary, what `createApp` returns, the routes that report it, and what delete does with a partial app are one design |
 | the app's name | 0007, 0019, 0025 | `appName` is the partition key, the bucket name and a DNS label, in one region |
-| the knowledge base | 0010, 0020, 0021, 0027 | document structure, vector store, data-access role and metadata schema |
-| app #1 | 0009, 0016, 0018, 0022 | whether Gali is composed or imported decides what the cap and the version policy apply to |
-| the knowledge base, revised | 0020, 0021, 0030 | the store is S3 Vectors, the door is S3, and an S3 door is what forces the role to read the bucket |
+| the knowledge base | 0010, 0033, 0034, 0027 | document structure, vector store, data-access role and metadata schema |
+| app #1 | 0016, 0018, 0022, 0035 | whether Gali is composed or imported decides what the cap and the version policy apply to |
+| the knowledge base, revised | 0033, 0034, 0030 | the store is S3 Vectors, the door is S3, and an S3 door is what forces the role to read the bucket |
 | conversation retention | 0028, and Gali's patient-facing disclaimer | deletion after a confirmed send needs a longer TTL, and the TTL is a promise made to the patient |
 | lifecycle states | 0013, 0029 | provisioning state and validation state are two independent axes on the same registry row |
 | provisioning failure | 0006, 0013, 0031, 0032 | the step count, the two terminal states, and the code that says which step and why. `docs/provisioning-architecture-comparison.md` compares how each option expresses them |
-| the app's name, revised | 0007, 0019, 0021, 0025 | a derived bucket name from a fixed prefix is what lets the KB read permission be written once with a wildcard |
+| the app's name, revised | 0007, 0019, 0025, 0034 | a derived bucket name from a fixed prefix is what lets the KB read permission be written once with a wildcard |
 | theming | 0023, and checklist U17 | template and colour are separate fields; the colour role set is closed and contrast is gated at save time |

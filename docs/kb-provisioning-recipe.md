@@ -51,8 +51,8 @@ There is a chicken-and-egg wrinkle worth naming: the role's *permission* policie
 reference the index ARN, and the index does not exist until K-2. Either the
 policy is written with a wildcard over the factory's index-name prefix, or it is
 attached narrowly and updated per app — and updating it per app is the shared-state
-mutation draft ADR 0021 argues against. **Recommend the prefix wildcard**, decided
-in 0021.
+mutation ADR 0021 argued against. **Recommend the prefix wildcard**, which is what
+ADR-0034 now recommends (0021 is superseded by it).
 
 ---
 
@@ -62,11 +62,12 @@ In order. Steps are numbered `K-n` so the rollback table in §7 can refer to the
 The order is forced: each step needs an identifier the previous one returns.
 
 > **Annotation, 2026-09-01.** K-1 below pairs `CreateBucket` with a bucket-policy
-> write. That was written against ADR 0021's original recommendation (d). ADR 0025's
-> derived bucket pattern has since moved 0021 toward (b) — one shared role with a
+> write. That was written against ADR 0021's recommendation (d). ADR 0025's
+> derived bucket pattern has since superseded 0021 with **ADR-0034**, which recommends
+> (b) — one shared role with a
 > naming-prefix wildcard, written once at platform setup — under which **the policy
 > write disappears from the create path entirely**. The step is left as written because
-> 0021 is still a draft; if (b) is accepted, K-1 is `CreateBucket` alone and the
+> 0034 is still a draft; if it is accepted, K-1 is `CreateBucket` alone and the
 > rollback in §7 loses nothing, since a bucket policy dies with its bucket.
 
 | # | API call | service | returns | blocking? |
@@ -248,7 +249,7 @@ s3:ListBucket   on  arn:aws:s3:::<app-bucket>
 App #1's role has neither, and that is not an oversight — a **CUSTOM** data source
 is *pushed to* via `IngestKnowledgeBaseDocuments`, so the KB never reads S3. The
 moment the factory uses an **S3** data source, the role must read the bucket. This
-is the point draft ADR 0021 exists for, and app #1 cannot validate the answer
+is the point ADR-0034 exists for, and app #1 cannot validate the answer
 because app #1 never needed it.
 
 ---
@@ -290,7 +291,7 @@ reason when it failed.
 
 ### Group A — one AWS Service Quotas visit, or one support ticket
 
-Same page, same conversation. Clearing this group unblocks ADR 0020's remaining
+Same page, same conversation. Clearing this group unblocks ADR-0033's remaining
 question.
 
 | # | item | why it decides something |
@@ -329,7 +330,7 @@ end-to-end provision answers all three.
 
 **Suggested order:** B first, because it is free and it may collapse option C in the
 orchestration comparison before any effort goes into it. Then A, because it is a
-five-minute console visit that settles 0020. Then C, which is the only group that costs
+five-minute console visit that settles 0033. Then C, which is the only group that costs
 real work. D can run in parallel with all of them.
 
 ## 9. What this recipe does not cover
