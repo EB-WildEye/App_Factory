@@ -177,8 +177,8 @@ reused by whatever harness eventually exists.
 
 ## Consequences
 
-- **The registry row grows four fields**, which is new work for 0007 — and 0007 is
-  accepted, so this is an amendment to it rather than a free addition.
+- **The registry row grows four fields.** They are now carried in **ADR-0036**, which
+  supersedes 0007 and describes the whole row; this ADR no longer needs to amend anything.
 - **The App lifecycle gains a state that is not about provisioning.** 0013's
   vocabulary (`pending`, `provisioning`, `complete`, `partial`, `failed`) describes
   whether resources exist. Validation state is orthogonal: a `complete` app can be

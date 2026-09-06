@@ -238,10 +238,9 @@ exception. Worth knowing before writing the handler.
 
 ## Consequences
 
-- **The registry row grows six fields.** New work for 0007, which is accepted — so an
-  amendment, alongside 0031's stranded-resources list and 0029's validation fields.
-  0007 is accumulating changes and should be re-read as a whole before any of them
-  land.
+- **The registry row grows six fields.** They are carried in **ADR-0036**, which
+  supersedes 0007 and describes the whole row in one place — written precisely because
+  0007 had accumulated claims from nine directions and had begun contradicting itself.
 - **Hebrew copy is needed per code**, in `lib/uiStrings.ts`, and a code with no copy
   must render as a generic message plus the code itself rather than as a blank.
 - **The mapping lives in one module** and is unit-testable without AWS: given a

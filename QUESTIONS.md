@@ -291,3 +291,23 @@ Options: (a) add a `PARTIALLY SUPERSEDED by ADR-00xx (item N)` form to the rule,
 Recommendation: (a) plus (c). (a) because the alternative is copying four correct decisions into a new file to change a fifth, and a copy is a second source of truth. (c) because the real defect is upstream: 0009 answered "where do rules live" *and* "is the precedence text unconditional" in one document, and those move independently. (b) is the purist option and it costs a restatement every time, which is how logs grow contradictions.
 Default taken for now: (a), applied to 0009 - `Status: accepted, Decision item 3 SUPERSEDED by ADR-0035`, with item 3 flagged in place at the point of use and the two amendments left where they are. Nothing was deleted from 0009, because deleting them would falsify the record of what that file said and when.
 
+## Q45 - Approve the ten new registry-row attribute names
+Blocks: any code that reads or writes the row beyond 0007's five settled attributes. The App list, `listApps()`, the teardown path and the failure display all wait on it.
+The row went from 5 attributes to 21, from nine ADRs. ADR-0036 describes the whole row; five names are DECIDED by 0007 and **ten are PROPOSED**, applying 0007's own two conventions - `snake_case` as stored, and descriptive over terse (0007 itself chose `dynamo_table_id` over the spec's `dynamo_id`). Applying a decided convention is not the same as inventing a name, but the names are still a contract, and DynamoDB attribute names are as expensive to change as any other persisted key.
+Proposed, grouped by what put them there:
+  - **0025 / 0026** - `bucket_name` (the derived name, stored, never re-derived at delete time)
+  - **0030 / 0033** - `data_source_id`, `vector_index_name` (both needed by teardown; neither existed when 0007 was written)
+  - **0013 / 0031** - `provisioning_status`, `stranded_resources`
+  - **0032** - `failed_step`, `failed_step_name`, `error_code`, `error_detail`, `retryable`, `failed_at`
+  - **0029** - `validation_state`, `question_set_version`, `validation_artefact_location`, `validation_commit_sha`, `validation_signed_by`
+  - **this ADR** - `updated_at`
+Options: (a) approve as proposed; (b) change specific names; (c) shorten the `validation_*` group by nesting it in one map attribute, which trades queryability for a smaller top level.
+Recommendation: (a), with one thing worth your attention - `updated_at` exists **only** because Q35's sweeper needs to detect a row stuck in `provisioning`. If you decide against a sweeper, that attribute has no second justification and should be dropped rather than kept in case.
+Default taken for now: none - no code reads or writes any of the ten. The five DECIDED attributes are safe to use today.
+
+## Q46 - The row is written first, so listApps must filter - which statuses does it return
+Blocks: `listApps()`'s contract in 0015, and the App list's default view.
+The cause: 0007 put the registry row at step B6 and said "the app becomes real here". 0013 and 0014 moved it to step 1, written as `pending`, so a failed create still leaves a record. **The row's existence now means "a create was attempted", not "an app exists"** - and a bare scan therefore lists attempts, including every failure ever.
+Options: (a) `listApps()` returns everything and the UI filters; (b) it returns only `complete`, with failures behind a separate call or an explicit filter; (c) it returns everything except `pending`, on the grounds that a `pending` row is seconds old and not yet interesting.
+Recommendation: (b) as the default with an explicit opt-in for the rest. A dashboard whose default view is "every app plus every failed attempt since launch" gets ignored, and the failures are worth seeing deliberately rather than mixed in. But this is a product judgement about what the Admin Dashboard is for, so it is yours.
+Default taken for now: none. ADR-0036 records the consequence and 0015 has not been accepted, so no route contract has been committed to.

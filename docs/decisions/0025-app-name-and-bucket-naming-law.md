@@ -159,8 +159,9 @@ The recipe is annotated rather than rewritten, because 0034 is still a draft.
   name out. Two implementations of it is how you eventually delete the wrong bucket.
 - **The registry row must store the derived bucket name**, not re-derive it at delete
   time. Re-deriving is fine until the pattern changes, and then the delete path
-  computes a name that does not exist while the real bucket stays. New work for 0007,
-  which is now accumulating amendments from 0029, 0031, 0032 and this ADR.
+  computes a name that does not exist while the real bucket stays. Carried in
+  **ADR-0036** as `bucket_name`; this ADR is also why 0007 needed superseding rather than
+  amending, since 0007 asserted that `app_name` *is* the bucket name.
 - **`appName` no longer appears in the S3 console as a bucket name a human recognises
   at a glance** — it appears inside one. That is a real operational cost of the
   derived pattern, and the mitigation is that the prefix makes every factory bucket

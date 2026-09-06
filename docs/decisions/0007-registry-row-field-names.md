@@ -1,7 +1,21 @@
 # 0007 — Registry row field names
 
-Status: accepted
+Status: SUPERSEDED by ADR-0036
 Date: 2026-08-23
+Superseded: 2026-09-06 — nine later ADRs added claims on this row, and one decision here
+became false: ADR 0025 made the bucket name derived, so `app_name` no longer names the
+bucket and S3 naming law is no longer its constraint.
+
+> **This text is the record of what was decided on 2026-08-23 and is preserved
+> unaltered. Do not act on it.** The current answer is
+> [ADR-0036](0036-factory-registry-row.md), which describes the whole row.
+>
+> Two things in this file are worth seeing rather than fixing, because they are the
+> evidence for why 0036 was written whole instead of amended a tenth time: it contains
+> `## Reasoning` and `## Consequences` **twice each**, from a botched edit, and the two
+> Consequences sections contradict each other — the first says the registry-row type is
+> "unblocked", the second says it "stays blocked". Both were in an accepted ADR, and
+> neither was marked.
 
 ## Context
 

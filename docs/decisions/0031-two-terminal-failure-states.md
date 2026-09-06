@@ -113,9 +113,9 @@ anyway.
   tried to clean up and could not. If the design ever rolls back automatically on
   every failure, `partial` becomes unreachable and should be removed rather than left
   as a status nothing sets.
-- **The registry row needs a stranded-resources attribute**, which is a list of
-  structures rather than a scalar. That is new work for 0007, and 0007 is accepted, so
-  it is an amendment.
+- **The registry row needs a stranded-resources attribute**, a list of structures rather
+  than a scalar. It is carried in **ADR-0036** as `stranded_resources`, which supersedes
+  0007 and describes the whole row.
 - **Retry needs a conditional write.** `PutItem` with a condition that the existing
   row's status is `failed_rolled_back` gives idempotent, race-free retry and rejects a
   retry over a stranded app for free.

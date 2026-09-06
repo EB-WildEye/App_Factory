@@ -146,7 +146,7 @@ B becomes arguable.
 Recorded for whichever option is taken.
 
 - **If A:** the registry row needs a field distinguishing a factory-provisioned
-  app from an imported one, which is new work for 0007 and for the Admin list
+  app from an imported one, which is new work for 0036 (the row) and for the Admin list
   (`U6`). Checklist `S9`, `R5`, `R6`, `R7` are closed as "spec describes apps #2+".
 - **If B:** ADR 0016's cap becomes a *design* constraint on the five parts, not
   just a validation, and the create form needs a mode where the composed prompt is
