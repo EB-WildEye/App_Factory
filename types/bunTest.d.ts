@@ -18,6 +18,8 @@ declare module 'bun:test' {
     toContain(expected: unknown): void;
     toHaveLength(expected: number): void;
     toBeGreaterThan(expected: number): void;
+    toBeGreaterThanOrEqual(expected: number): void;
+    toBeLessThan(expected: number): void;
     toBeLessThanOrEqual(expected: number): void;
     toThrow(expected?: unknown): void;
     toMatch(expected: RegExp | string): void;
@@ -27,8 +29,25 @@ declare module 'bun:test' {
     readonly not: Matchers;
   }
 
+  type TestBody = () => void | Promise<void>;
+
+  /**
+   * `skipIf` is what lets a test depend on something the machine may not have — the
+   * gitignored production source, a Gali checkout — without either failing on a clean
+   * clone or being deleted for the machines that do have it.
+   */
+  interface TestFunction {
+    (label: string, body: TestBody): void;
+    skipIf(condition: boolean): (label: string, body: TestBody) => void;
+  }
+
+  interface DescribeFunction {
+    (label: string, body: () => void): void;
+    skipIf(condition: boolean): (label: string, body: () => void) => void;
+  }
+
   export function expect(actual: unknown): Expectation;
-  export function describe(label: string, body: () => void): void;
-  export function test(label: string, body: () => void | Promise<void>): void;
-  export function it(label: string, body: () => void | Promise<void>): void;
+  export const describe: DescribeFunction;
+  export const test: TestFunction;
+  export const it: TestFunction;
 }

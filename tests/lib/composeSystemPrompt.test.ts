@@ -16,10 +16,13 @@ import {
 } from '@/lib/composeSystemPrompt';
 import {
   BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT,
-  GALI_SYSTEM_PROMPT,
-  GALI_SYSTEM_PROMPT_PARTS,
   GALI_SYSTEM_PROMPT_SEPARATOR,
 } from '@/lib/gali/constants';
+import {
+  FIXTURE_OVERSIZED_PARTS,
+  FIXTURE_PROMPT_PART_TEXT,
+  FIXTURE_SINGLE_RULE_PARTS,
+} from '@/tests/fixtures/systemPromptParts';
 import type { AppConfigSystemPrompt } from '@/types/appConfig';
 
 /** Short, distinguishable parts, so an ordering bug shows up as a wrong string. */
@@ -30,21 +33,6 @@ const SMALL_PARTS: AppConfigSystemPrompt = {
   rules: ['R1.', 'R2.'],
   formatAndFlags: 'F.',
 };
-
-/**
- * Gali's real five parts, with `_RULES` as the one-item list the factory's type
- * requires. Gali authored that part as a single string, so a one-item list is the
- * faithful representation.
- */
-const GALI_PARTS: AppConfigSystemPrompt = {
-  identity: GALI_SYSTEM_PROMPT_PARTS.identity,
-  language: GALI_SYSTEM_PROMPT_PARTS.language,
-  voice: GALI_SYSTEM_PROMPT_PARTS.voice,
-  rules: [GALI_SYSTEM_PROMPT_PARTS.rules],
-  formatAndFlags: GALI_SYSTEM_PROMPT_PARTS.formatAndFlags,
-};
-
-const GALI_COMPOSED_LENGTH = 11492;
 
 function partsOfLength(total: number): AppConfigSystemPrompt {
   return {
@@ -93,10 +81,12 @@ describe('composeSystemPrompt — join order and separator', () => {
   });
 
   test('a one-item rule list is byte-identical to the authored string', () => {
-    // This is what lets Gali's single authored _RULES survive the list type.
-    expect([GALI_SYSTEM_PROMPT_PARTS.rules].join(RULES_ITEM_SEPARATOR)).toBe(
-      GALI_SYSTEM_PROMPT_PARTS.rules,
+    // This is what lets a single authored _RULES — which is how app #1 wrote it —
+    // survive the list type without gaining a separator.
+    expect([FIXTURE_PROMPT_PART_TEXT.rules].join(RULES_ITEM_SEPARATOR)).toBe(
+      FIXTURE_PROMPT_PART_TEXT.rules,
     );
+    expect(FIXTURE_SINGLE_RULE_PARTS.rules).toHaveLength(1);
   });
 });
 
@@ -163,20 +153,27 @@ describe('composeSystemPrompt — the 4096 cap (ADR 0016)', () => {
   });
 });
 
-describe('composeSystemPrompt — Gali', () => {
-  test("Gali's five documentation parts cannot be composed: they are 2.8x the cap", () => {
-    // Not a bug in this function. It is the I7 finding and the evidence for draft ADR
-    // 0018: Gali's five-part SYSTEM_PROMPT is documentation, and the string production
-    // actually sends is a separately authored 4064-character template.
-    const failure = composeExpectingTooLong(GALI_PARTS, false);
-    expect(failure.composedLength).toBe(GALI_SYSTEM_PROMPT.length);
+describe('composeSystemPrompt — five real-sized parts', () => {
+  test('five parts that each nearly fill the cap are refused, not truncated', () => {
+    // The shape of the I7 finding and the evidence for draft ADR 0018: five separately
+    // authored parts can each look reasonable and still compose to something no
+    // service will accept. Asserted here against a synthetic set — the same property
+    // against app #1's actual parts lives in tests/gali/productionSource.test.ts,
+    // which reads the gitignored source and skips without it (ADR 0039).
+    const failure = composeExpectingTooLong(FIXTURE_OVERSIZED_PARTS, false);
+    expect(failure.composedLength).toBeGreaterThan(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT * 4);
+    expect(failure.limit).toBe(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT);
   });
 
-  test("the join reproduces Gali's SYSTEM_PROMPT length exactly, cap aside", () => {
-    // A composed length matching Gali's to the character is what says the order, the
-    // separator and the rule join introduced nothing of their own.
-    const failure = composeExpectingTooLong(GALI_PARTS, false);
-    expect(failure.composedLength).toBe(GALI_COMPOSED_LENGTH);
-    expect(GALI_SYSTEM_PROMPT.length).toBe(GALI_COMPOSED_LENGTH);
+  test('the composed length is exactly the sum of the parts, so the join adds nothing', () => {
+    // A join that introduced a separator of its own would show up here as a surplus.
+    const parts = FIXTURE_OVERSIZED_PARTS;
+    const expected =
+      parts.identity.length +
+      parts.language.length +
+      parts.voice.length +
+      parts.rules.join(RULES_ITEM_SEPARATOR).length +
+      parts.formatAndFlags.length;
+    expect(composeExpectingTooLong(parts, false).composedLength).toBe(expected);
   });
 });

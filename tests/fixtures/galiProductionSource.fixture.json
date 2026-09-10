@@ -1,0 +1,47 @@
+{
+  "manifest": {
+    "generatedAt": "2026-01-01T00:00:00+00:00",
+    "backendCommit": "fixture-backend (never read)",
+    "frontendCommit": "fixture-frontend (never read)",
+    "digests": {
+      "ragPromptTemplate": "11b1187c93e130d2f4bdd86e4e13083c57c9c25121237ac5036070e724143eb1",
+      "classifierSystemPrompt": "c85b67bb6bb219b88a5d444ef3097b4e5fd489380f70e6edff6b0698179d05f8",
+      "systemPrompt": "91732d85e3855ca889f1ffa0de0eb0664e77b1feb8e9b4683e3646e84be7af31",
+      "systemPromptParts.identity": "cd210d6d82c3a576462e7ba4d74bc23087381b162d8bd82b5e212d90718f1344",
+      "systemPromptParts.language": "66beffde8300ad208e14e6e8aee3fc86983137e20996dfb1bb01debab71f8453",
+      "systemPromptParts.voice": "39436dce9ca90a4531a01d35d13cb6fe8fa6c9ebf193cdd8fbcb1704c90b6058",
+      "systemPromptParts.rules": "c939f7fe8418b092dea7c3b2533b704cb2f66f194884e062d3a152a58639af1b",
+      "systemPromptParts.formatAndFlags": "fd6051898bd719e52c698bb22ced913522afe505d9ffe0313fa2522f27640b33"
+    },
+    "lengths": {
+      "ragPromptTemplate": 58,
+      "classifierSystemPrompt": 39,
+      "systemPrompt": 191,
+      "systemPromptParts.identity": 38,
+      "systemPromptParts.language": 38,
+      "systemPromptParts.voice": 35,
+      "systemPromptParts.rules": 35,
+      "systemPromptParts.formatAndFlags": 45
+    }
+  },
+  "resources": {
+    "knowledgeBaseId": "fixture-knowledge-base-id",
+    "customDataSourceId": "fixture-custom-data-source-id",
+    "syncDataSourceId": "fixture-sync-data-source-id",
+    "primaryModelId": "fixture-primary-model-id",
+    "fallbackModelId": "fixture-fallback-model-id",
+    "chatTableNamePattern": "fixture-chat-table-${Stage}",
+    "chatTableNameDefault": "fixture-chat-table-resolved"
+  },
+  "prompts": {
+    "ragPromptTemplate": "fixture-rag-template: not a real prompt. $search_results$\n",
+    "classifierSystemPrompt": "fixture-classifier: not a real prompt.\n",
+    "systemPromptParts": {
+      "identity": "fixture-identity: not a real prompt.\n\n",
+      "language": "fixture-language: not a real prompt.\n\n",
+      "voice": "fixture-voice: not a real prompt.\n\n",
+      "rules": "fixture-rules: not a real prompt.\n\n",
+      "formatAndFlags": "fixture-format-and-flags: not a real prompt.\n"
+    }
+  }
+}

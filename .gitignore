@@ -10,6 +10,18 @@ next-env.d.ts
 .env
 .env.*
 
+# Production values — never committed, in any form. ADR 0039.
+# This repository is public. Gali's clinical prompt text, its Bedrock resource ids and
+# its table names are production facts about a live clinical system. The pattern is
+# deliberately wider than the one file that needs it today, so that a second private
+# file is safe by default rather than safe if someone remembers.
+*.local.json
+
+# The read-only production audit and the Hebrew prompt drafts derived from it. Kept on
+# disk, out of git: they are saturated with live AWS identifiers and clinical text.
+docs/gali_readonly_audit_2026-09-01.md
+docs/gali-five-parts-draft.md
+
 # TypeScript
 *.tsbuildinfo
 

@@ -1,33 +1,48 @@
 #!/usr/bin/env python3
-"""Regenerate the copied-from-Gali artefacts in this repo.
+"""Regenerate the Gali-derived artefacts in this repo.
 
-Two outputs, both derived from the read-only Gali backend rather than retyped:
+Three outputs, all derived from the read-only Gali backend rather than retyped:
 
-  lib/gali/constants.ts        the whole file
-  docs/gali-ground-truth.md    only the regions between GENERATED markers -
-                               the verbatim prompt blocks and the digest table
+  lib/gali/gali-production-source.local.json   GITIGNORED. Every production value:
+                                               resource ids, inference profile ids,
+                                               table names, and the clinical prompt
+                                               text, plus a digest and a length for
+                                               each prompt.
+  lib/gali/constants.ts                        the whole file. STRUCTURE ONLY - the
+                                               part order, the separator, the caps,
+                                               the key schema, the metadata schema.
+                                               No production value appears in it.
+  docs/gali-ground-truth.md                    only the regions between GENERATED
+                                               markers - lengths and provenance, with
+                                               a redaction notice where the verbatim
+                                               prompt blocks used to be.
 
-Everything else in the document is hand-written prose and is never touched.
+Why the split: this repository is PUBLIC (ADR 0039). Gali's prompt text is a validated
+clinical artefact belonging to the hospital, and its resource ids are names AWS will
+answer to. Neither belongs in a public git history. What the factory actually needs
+committed is the shape, and the shape carries no secret.
 
-Why this exists: the strings are ~21,000 characters of Hebrew clinical text. Hand
-copying them is how a byte-level drift gets introduced, and the golden test only
-catches drift after it has been committed. Answers Q3.
+Why a generator at all: the strings are ~21,000 characters of Hebrew clinical text.
+Hand copying them is how a byte-level drift gets introduced. Answers Q3.
 
-The Gali repos are READ-ONLY. This script opens files there for reading and
-writes nothing, not even bytecode - see the sys.dont_write_bytecode line below,
-which keeps __pycache__ out of a repo we are not allowed to touch.
+The Gali repos are READ-ONLY. This script opens files there for reading and writes
+nothing, not even bytecode - see the sys.dont_write_bytecode line below, which keeps
+__pycache__ out of a repo we are not allowed to touch.
 
 Usage:
-    uv run scripts/generate_gali_constants.py            # write both outputs
+    uv run scripts/generate_gali_constants.py            # write all three outputs
     uv run scripts/generate_gali_constants.py --check    # verify, write nothing
     uv run scripts/generate_gali_constants.py --gali-backend <path>
 
---check exits 1 on drift and prints which output disagrees, so it can be wired
-into CI next to the four gates.
+--check exits 1 on drift and prints which output disagrees, so it can be wired into CI
+next to the four gates. It is also what `tests/gali/productionSource.test.ts` runs,
+when this machine has the Gali checkout, to prove the local file is what the generator
+produces and not something edited by hand.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import io
 import json
@@ -42,6 +57,9 @@ DEFAULT_GALI_BACKEND = r"C:\Users\eb300\Desktop\Gali-AWS-backend"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONSTANTS_PATH = os.path.join(REPO_ROOT, "lib", "gali", "constants.ts")
+LOCAL_SOURCE_PATH = os.path.join(
+    REPO_ROOT, "lib", "gali", "gali-production-source.local.json"
+)
 GROUND_TRUTH_PATH = os.path.join(REPO_ROOT, "docs", "gali-ground-truth.md")
 
 # Provenance of the two source repos, recorded in the generated header.
@@ -58,6 +76,16 @@ PART_SOURCE_LINES = {
     "rules": "103-214",
     "formatAndFlags": "219-288",
 }
+
+# What the document says where a verbatim block used to be. One sentence, so a reader
+# who arrives at the anchor learns where the value went rather than that it is missing.
+REDACTION_NOTICE = (
+    "> **Redacted (ADR 0039).** The text is a production clinical artefact and this\n"
+    "> repository is public. It lives in `lib/gali/gali-production-source.local.json`,\n"
+    "> which is gitignored and regenerated from the read-only Gali checkout by\n"
+    "> `scripts/generate_gali_constants.py`. Length and provenance stay below; the\n"
+    "> bytes do not."
+)
 
 
 class GaliSource:
@@ -81,6 +109,67 @@ class GaliSource:
         self.system_prompt: str = prompt.SYSTEM_PROMPT
         self.classifier_prompt: str = redflag_classifier._SYSTEM_PROMPT
 
+        # Resource identifiers. Read from the backend so that a changed id in Gali
+        # shows up here rather than in a stale hand-written literal.
+        self.resources: dict[str, str] = read_resources(backend_path)
+
+
+RESOURCE_PATTERNS: dict[str, tuple[str, str]] = {
+    # name: (relative path under the backend, regex with one capture group)
+    "knowledgeBaseId": ("scripts/ingest_kb.py", r'KB_ID\s*=\s*["\']([A-Z0-9]{8,12})["\']'),
+    "customDataSourceId": (
+        "scripts/ingest_kb.py",
+        r'DATA_SOURCE_ID\s*=\s*["\']([A-Z0-9]{8,12})["\']',
+    ),
+}
+
+
+def read_resources(backend_path: str) -> dict[str, str]:
+    """Resource identifiers, read out of the backend's own source.
+
+    Only the two ids that appear as plain assignments are scraped. The rest live in
+    `samconfig.toml` inside one long space-separated parameter string, and a regex over
+    that is less reliable than reading it as a whole, so they are pulled from there by
+    name below.
+    """
+    values: dict[str, str] = {}
+
+    for name, (relative, pattern) in RESOURCE_PATTERNS.items():
+        text = read_text(os.path.join(backend_path, relative))
+        match = re.search(pattern, text)
+        if match is None:
+            raise SystemExit(f"Could not read {name} from {relative}")
+        values[name] = match.group(1)
+
+    samconfig = read_text(os.path.join(backend_path, "samconfig.toml"))
+    for name, key in (
+        ("syncDataSourceId", "DataSourceId"),
+        ("primaryModelId", "ModelArn"),
+        ("fallbackModelId", "FallbackModelArn"),
+    ):
+        match = re.search(rf"\b{key}=([^\s\"']+)", samconfig)
+        if match is None:
+            raise SystemExit(f"Could not read {name} ({key}) from samconfig.toml")
+        values[name] = match.group(1)
+
+    template = read_text(os.path.join(backend_path, "template.yaml"))
+    match = re.search(r"TableName:\s*!Sub\s*(?:\"|')?([A-Za-z0-9$among{}._-]+)", template)
+    if match is None:
+        raise SystemExit("Could not read the chat table name from template.yaml")
+    values["chatTableNamePattern"] = match.group(1)
+
+    # The code-side default, i.e. the second argument to os.environ.get.
+    config = read_text(os.path.join(backend_path, "shared", "shared", "config.py"))
+    match = re.search(
+        r'TABLE_NAME[^=]*=\s*os\.environ\.get\(\s*["\'][^"\']+["\']\s*,\s*["\']([a-z0-9-]+)["\']',
+        config,
+    )
+    if match is None:
+        raise SystemExit("Could not read the chat table default from config.py")
+    values["chatTableNameDefault"] = match.group(1)
+
+    return values
+
 
 def ts_string(value: str) -> str:
     """A TypeScript double-quoted literal, byte-exact, Hebrew left as Hebrew."""
@@ -91,30 +180,73 @@ def sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def digested_values(src: GaliSource) -> dict[str, str]:
+    """Every value the manifest digests, keyed as `lib/gali/productionSource.ts` keys them."""
+    values = {
+        "ragPromptTemplate": src.rag_template,
+        "classifierSystemPrompt": src.classifier_prompt,
+        "systemPrompt": src.system_prompt,
+    }
+    for name in PART_ORDER:
+        values[f"systemPromptParts.{name}"] = src.parts[name]
+    return values
+
+
+def render_local_source(src: GaliSource, generated_at: str) -> str:
+    """The gitignored JSON. Never committed, never printed, never logged."""
+    values = digested_values(src)
+    document = {
+        "manifest": {
+            "generatedAt": generated_at,
+            "backendCommit": BACKEND_COMMIT,
+            "frontendCommit": FRONTEND_COMMIT,
+            "digests": {name: sha256(value) for name, value in values.items()},
+            "lengths": {name: len(value) for name, value in values.items()},
+        },
+        "resources": {
+            "knowledgeBaseId": src.resources["knowledgeBaseId"],
+            "customDataSourceId": src.resources["customDataSourceId"],
+            "syncDataSourceId": src.resources["syncDataSourceId"],
+            "primaryModelId": src.resources["primaryModelId"],
+            "fallbackModelId": src.resources["fallbackModelId"],
+            "chatTableNamePattern": src.resources["chatTableNamePattern"],
+            "chatTableNameDefault": src.resources["chatTableNameDefault"],
+        },
+        "prompts": {
+            "ragPromptTemplate": src.rag_template,
+            "classifierSystemPrompt": src.classifier_prompt,
+            "systemPromptParts": {name: src.parts[name] for name in PART_ORDER},
+        },
+    }
+    return json.dumps(document, ensure_ascii=False, indent=2) + "\n"
+
+
 def render_constants(src: GaliSource) -> str:
-    """The whole of lib/gali/constants.ts."""
+    """The whole of lib/gali/constants.ts. Structure only - no production value."""
     header = f'''/**
- * Gali production constants, copied verbatim out of the read-only Gali repos.
+ * Gali's STRUCTURE, read out of the read-only Gali repos.
  *
- * Every value here is a value to be COPIED, never chosen. `docs/gali-ground-truth.md`
- * records the provenance of each one — file and line — and lists explicitly what the
- * Gali repos do NOT state. Nothing in this module is inferred: a value the repos are
- * silent about is absent here rather than guessed.
+ * What is here: the shapes, orders, separators, caps and schemas the factory has to
+ * reproduce. Every one of them is a value to be COPIED, never chosen, and none of them
+ * is a secret - a part order is not a resource id and a key schema is not a prompt.
+ *
+ * What is NOT here, deliberately (ADR 0039): the clinical prompt text, the Bedrock
+ * knowledge base and data source ids, the inference profile ids, and the production
+ * table names. This repository is public. Those values live in
+ * `lib/gali/gali-production-source.local.json`, which is gitignored, and are reached
+ * through `lib/gali/productionSource.ts` by the two things that legitimately need
+ * them: the tests, on a machine that has the file, and this generator.
  *
  * Sources, both read-only:
  *   backend   Gali-AWS-backend  @ {BACKEND_COMMIT}
  *   frontend  Gali-frontend     @ {FRONTEND_COMMIT}
  *
- * The prompt strings are the values AFTER the import-time phone-link substitution in
- * `shared/shared/prompt.py:394-404` — what production actually sends, not the
- * pre-substitution literals in the source file.
+ * `docs/gali-ground-truth.md` records the provenance of each value - file and line -
+ * and lists explicitly what the Gali repos do NOT state. Nothing in this module is
+ * inferred: a value the repos are silent about is absent here rather than guessed.
  *
- * `tests/gali/constants.golden.test.ts` pins every string in this module to the
- * SHA-256 digests recorded in `docs/gali-ground-truth.md`. Editing a value here
- * without re-reading Gali fails that test.
- *
- * GENERATED by scripts/generate_gali_constants.py. Do not hand-edit: run the
- * script, which reads the values back out of Gali.
+ * GENERATED by scripts/generate_gali_constants.py. Do not hand-edit: run the script,
+ * which reads the values back out of Gali.
  */
 
 '''
@@ -125,29 +257,13 @@ def render_constants(src: GaliSource) -> str:
     add("/** AWS region. `shared/shared/config.py:14`, `scripts/ingest_kb.py:34`. */\n")
     add("export const GALI_REGION: string = 'eu-west-1';\n\n")
 
-    add("/** Bedrock Knowledge Base id. `scripts/ingest_kb.py:32`, `samconfig.toml:10`. */\n")
-    add("export const GALI_KNOWLEDGE_BASE_ID: string = '[redacted:kb-id]';\n\n")
-
     add('''/**
- * The KB has two data source ids in the repo and they are not the same value. Both are
- * recorded, because the repo nowhere states that either supersedes the other.
- *
- * - `GALI_CUSTOM_DATA_SOURCE_ID` — the CUSTOM data source the markdown is pushed into
- *   with `IngestKnowledgeBaseDocuments` (`scripts/ingest_kb.py:33`,
- *   `scripts/kb_verify_reconstruct.py:26`).
- * - `GALI_SYNC_DATA_SOURCE_ID` — the `DataSourceId` the deployed sync Lambda calls
- *   `StartIngestionJob` against (`samconfig.toml:10` into `template.yaml:238`).
+ * Data source type on the ingest path (`scripts/ingest_kb.py:222`). The *type* is a
+ * shape the factory has to support; the two data source *ids* are production values
+ * and are not here - see `lib/gali/productionSource.ts`.
  */
 ''')
-    add("export const GALI_CUSTOM_DATA_SOURCE_ID: string = '[redacted:data-source-id-custom]';\n")
-    add("export const GALI_SYNC_DATA_SOURCE_ID: string = '[redacted:data-source-id-sync]';\n\n")
-
-    add("/** Data source type on the ingest path. `scripts/ingest_kb.py:222`. */\n")
     add("export const GALI_DATA_SOURCE_TYPE: string = 'CUSTOM';\n\n")
-
-    add("/** Inference profile ids. `samconfig.toml:10`. */\n")
-    add("export const GALI_PRIMARY_MODEL_ID: string = '[redacted:model-id-primary]';\n")
-    add("export const GALI_FALLBACK_MODEL_ID: string = '[redacted:model-id-fallback]';\n\n")
 
     add('''/**
  * Retrieval and inference settings. All three are environment-variable defaults in
@@ -159,33 +275,32 @@ def render_constants(src: GaliSource) -> str:
     add("export const GALI_GENERATION_MAX_TOKENS: number = 4096;\n")
     add("export const GALI_GENERATION_TEMPERATURE: number = 0.3;\n\n")
 
-    add("/** Query transformation, chosen over Bedrock's default rewriter. `functions/chat/app.py:123`. */\n")
+    add(
+        "/** Query transformation, chosen over Bedrock's default rewriter. "
+        "`functions/chat/app.py:123`. */\n"
+    )
     add("export const GALI_QUERY_TRANSFORMATION_TYPE: string = 'QUERY_DECOMPOSITION';\n\n")
 
     add('''/**
  * Bedrock RetrieveAndGenerate hard-caps `textPromptTemplate` at 4096 characters and
  * requires the placeholder. Gali asserts both at import time
- * (`shared/shared/prompt.py:406-416`) — which is where ADR 0016 got the number.
+ * (`shared/shared/prompt.py:406-416`) - which is where ADR 0016 got the number.
+ *
+ * Contested: the service model declares 4000. See `QUESTIONS.md` Q43. The factory's
+ * own authoring budget is lower again and is NOT this constant - this is the service
+ * limit as Gali asserts it.
  */
 ''')
     add("export const BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT: number = 4096;\n")
     add("export const BEDROCK_SEARCH_RESULTS_PLACEHOLDER: string = '$search_results$';\n\n")
 
     add('''/**
- * THE LIVE PROMPT. The string production sends as `textPromptTemplate`
- * (`shared/shared/prompt.py:300-380`, sent at `functions/chat/app.py:127`). It is
- * hand-written and condensed — it is NOT the five parts joined.
- */
-''')
-    add("export const GALI_RAG_PROMPT_TEMPLATE: string = " + ts_string(src.rag_template) + ";\n\n")
-
-    add('''/**
  * The five documentation parts (`shared/shared/prompt.py:21-288`) and the join that
  * builds `SYSTEM_PROMPT` at `shared/shared/prompt.py:293`. The separator is the empty
  * string: every part carries its own trailing newlines.
  *
- * The composed value is documentation in Gali, not the live prompt. At 11,492
- * characters it is nearly 3x the 4096 cap, so it could never be sent as one template.
+ * The part TEXT is a production value and is not in this file. What is here is the
+ * order and the separator, which is what `composeSystemPrompt` needs.
  */
 ''')
     add("export type GaliSystemPromptPartName =\n")
@@ -195,44 +310,35 @@ def render_constants(src: GaliSource) -> str:
         add(f"  '{name}',\n")
     add("] as const;\n\n")
     add("export const GALI_SYSTEM_PROMPT_SEPARATOR: string = '';\n\n")
-    add("export const GALI_SYSTEM_PROMPT_PARTS: Readonly<Record<GaliSystemPromptPartName, string>> = {\n")
-    for name in PART_ORDER:
-        add(f"  {name}: {ts_string(src.parts[name])},\n")
-    add("};\n\n")
-    add('''/** The five parts joined the way Gali joins them. Equal to Gali's `SYSTEM_PROMPT`. */
-export const GALI_SYSTEM_PROMPT: string = GALI_SYSTEM_PROMPT_PART_ORDER.map(
-  (name) => GALI_SYSTEM_PROMPT_PARTS[name],
-).join(GALI_SYSTEM_PROMPT_SEPARATOR);
-
-''')
 
     add('''/**
  * The triage classifier: one Bedrock `Converse` call per turn, made BEFORE retrieval
  * (`shared/shared/redflag_classifier.py:213-247`, called at `functions/chat/app.py:416`).
- * Its prompt is locked at commit a635c2e (2026-07-05) — the last commit to touch that
- * file, and the commit the validation changelog names as the locked prompt.
+ * Its prompt is locked at commit a635c2e (2026-07-05) - the last commit to touch that
+ * file, and the commit the validation changelog names as the locked prompt. The prompt
+ * itself is a production value and is not in this file.
  *
  * Any API error, empty response, or unparseable label resolves to `ER`, so a missed
  * classification can never suppress an escalation.
  */
 ''')
-    add("export const GALI_TRIAGE_TIERS: readonly string[] = ['ER', 'CLARIFY_ER', 'SOFT', 'EXPLAIN'] as const;\n")
+    add(
+        "export const GALI_TRIAGE_TIERS: readonly string[] = "
+        "['ER', 'CLARIFY_ER', 'SOFT', 'EXPLAIN'] as const;\n"
+    )
     add("export const GALI_TRIAGE_FAIL_SAFE_TIER: string = 'ER';\n")
     add("export const GALI_CLASSIFIER_MAX_TOKENS: number = 8;\n")
     add("export const GALI_CLASSIFIER_TEMPERATURE: number = 0;\n")
     add("export const GALI_CLASSIFIER_API: string = 'bedrock-runtime.Converse';\n")
-    add("export const GALI_CLASSIFIER_PROMPT_LOCKED_AT: string = 'a635c2e';\n")
-    add("export const GALI_CLASSIFIER_SYSTEM_PROMPT: string = " + ts_string(src.classifier_prompt) + ";\n\n")
+    add("export const GALI_CLASSIFIER_PROMPT_LOCKED_AT: string = 'a635c2e';\n\n")
 
     add('''/**
- * The chat-history table (`template.yaml:82-105`). The name is a CloudFormation `!Sub`
- * pattern, recorded verbatim. `samconfig.toml` sets no `Stage`, so the template default
- * `dev` applies, which matches `shared/shared/config.py:17`.
+ * The chat-history table (`template.yaml:82-105`). The table NAME is a production
+ * value and is not here; its shape is, because the shape is what the factory has to
+ * be able to create.
  */
 ''')
-    add("export const GALI_CHAT_TABLE_NAME_PATTERN: string = '[redacted:chat-table-pattern]';\n")
-    add("export const GALI_CHAT_TABLE_STAGES: readonly string[] = ['dev', 'prod'] as const;\n")
-    add("export const GALI_CHAT_TABLE_NAME_DEFAULT: string = '[redacted:chat-table]';\n\n")
+    add("export const GALI_CHAT_TABLE_STAGES: readonly string[] = ['dev', 'prod'] as const;\n\n")
     add('''export type GaliKeyType = 'HASH' | 'RANGE';
 export type GaliAttributeType = 'S' | 'N';
 
@@ -328,27 +434,28 @@ export const GALI_KB_TOPIC_TAGS_MAX: number = 10;
     return header + "".join(body)
 
 
-def render_digest_table(src: GaliSource) -> str:
-    """The golden table the constants test parses."""
-    rows = ["| constant | chars | sha256 |", "| -------- | ----- | ------ |"]
-
-    def row(name: str, value: str) -> str:
-        return f"| `{name}` | {len(value)} | `{sha256(value)}` |"
-
-    rows.append(row("GALI_RAG_PROMPT_TEMPLATE", src.rag_template))
-    for name in PART_ORDER:
-        rows.append(row(f"GALI_SYSTEM_PROMPT_PARTS.{name}", src.parts[name]))
-    rows.append(row("GALI_SYSTEM_PROMPT", src.system_prompt))
-    rows.append(row("GALI_CLASSIFIER_SYSTEM_PROMPT", src.classifier_prompt))
+def render_length_table(src: GaliSource) -> str:
+    """Lengths, not text. What the document is allowed to say about the prompts."""
+    values = digested_values(src)
+    rows = ["| value | characters |", "| ----- | ---------- |"]
+    for name, value in values.items():
+        rows.append(f"| `{name}` | {len(value)} |")
+    rows.append("")
+    rows.append(
+        "Digests are in the local source file's `manifest.digests`, not here. A digest "
+        "committed next to a redacted value is still a pin against a production string, "
+        "and the integrity check it enabled is now done inside the local file - see "
+        "`findManifestMismatches` in `lib/gali/productionSource.ts`."
+    )
     return "\n".join(rows)
 
 
 def render_rag_block(src: GaliSource) -> str:
-    return "```text\n" + src.rag_template + "```"
+    return REDACTION_NOTICE
 
 
 def render_classifier_block(src: GaliSource) -> str:
-    return "```text\n" + src.classifier_prompt + "\n```"
+    return REDACTION_NOTICE
 
 
 def render_part_table(src: GaliSource) -> str:
@@ -379,7 +486,7 @@ REGIONS: dict[str, Callable[[GaliSource], str]] = {
     "rag-prompt-template": render_rag_block,
     "classifier-system-prompt": render_classifier_block,
     "prompt-part-table": render_part_table,
-    "digest-table": render_digest_table,
+    "digest-table": render_length_table,
 }
 
 
@@ -412,6 +519,27 @@ def write_text(path: str, content: str) -> None:
         handle.write(content)
 
 
+def existing_generated_at(path: str) -> str:
+    """The timestamp already in the local file, so --check does not report drift on it.
+
+    Regenerating always produces a new `generatedAt`, and a check that failed for that
+    reason would fail every time and teach everyone to ignore it.
+    """
+    if not os.path.exists(path):
+        return ""
+    try:
+        with io.open(path, encoding="utf-8") as handle:
+            document = json.load(handle)
+    except (OSError, ValueError):
+        return ""
+    manifest = document.get("manifest")
+    if isinstance(manifest, dict):
+        value = manifest.get("generatedAt")
+        if isinstance(value, str):
+            return value
+    return ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -428,12 +556,23 @@ def main() -> int:
 
     src = GaliSource(args.gali_backend)
 
+    generated_at = (
+        existing_generated_at(LOCAL_SOURCE_PATH)
+        if args.check
+        else datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    )
+
     constants = render_constants(src)
+    local_source = render_local_source(src, generated_at)
     document = read_text(GROUND_TRUTH_PATH)
     for region, render in REGIONS.items():
         document = replace_region(document, region, render(src))
 
-    outputs = ((CONSTANTS_PATH, constants), (GROUND_TRUTH_PATH, document))
+    outputs = (
+        (LOCAL_SOURCE_PATH, local_source),
+        (CONSTANTS_PATH, constants),
+        (GROUND_TRUTH_PATH, document),
+    )
 
     if args.check:
         drifted = [path for path, expected in outputs if read_text(path) != expected]
@@ -445,7 +584,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        print("Both outputs match the Gali source.", file=sys.stderr)
+        print("All three outputs match the Gali source.", file=sys.stderr)
         return 0
 
     for path, content in outputs:
