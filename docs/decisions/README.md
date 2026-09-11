@@ -107,6 +107,7 @@ successor.
 | [0036](0036-factory-registry-row.md) | The factory registry row, whole | accepted for 0007's five attributes; DRAFT for the rest — supersedes 0007 |
 | [0037](0037-lambda-orchestrator.md) | Provisioning runs on a Lambda orchestrator | DRAFT; the choice is DECIDED |
 | [0038](0038-create-form-draft-persistence.md) | The create form remembers its own draft | DRAFT; the policy is DECIDED |
+| [0039](0039-production-values-out-of-a-public-repo.md) | Production values do not live in a public repository | accepted |
 
 ## Coupled decisions
 
