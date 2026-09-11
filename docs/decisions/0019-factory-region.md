@@ -32,7 +32,7 @@ Region is not a cosmetic setting here. Three things depend on it:
    in one region is taken everywhere, so `appName` collides across regions
    (see 0025).
 2. **Bedrock model availability differs by region**, and Gali's inference profile
-   ids are region-prefixed: `[redacted:model-id-primary]`. Moving region
+   ids are region-prefixed: `«redacted:model-id-primary»`. Moving region
    means different model ids, which means re-validating a frozen system.
 3. **A Bedrock Knowledge Base and its vector store are regional**, and a KB cannot
    read an S3 bucket in another region without cross-region configuration that

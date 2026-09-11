@@ -44,13 +44,13 @@ of that exists in the spec, the build plan, or `AppConfig`.
 points at `s3://<app>/kb/`. Gali's KB uses a **CUSTOM** data source and pushes
 markdown with `IngestKnowledgeBaseDocuments`, a per-document upsert keyed on
 document id (`scripts/ingest_kb.py:2-8, 217-252`). The bucket in the stack is
-`[redacted:documents-bucket-pattern]` and the watched prefix is
+`«redacted:documents-bucket-pattern»` and the watched prefix is
 `documents/`, not `kb/` (`template.yaml:112, 270`). There is no `prompt/` prefix.
 This mismatch is the *reason* per-file re-embedding (`E8`) is feasible at all, so
 it is not purely a cost.
 
 **3. The chat table (checklist `R7`).** Spec: name `<app>-chat`, key `session_id`,
-TTL attribute `expires_at`, rolling 24h. Gali: name `[redacted:chat-table-pattern]`,
+TTL attribute `expires_at`, rolling 24h. Gali: name `«redacted:chat-table-pattern»`,
 **composite** key `session_id` HASH + `timestamp` RANGE, TTL attribute **`ttl`**,
 expiring at the **next midnight Asia/Jerusalem** (`template.yaml:87-105`,
 `shared/shared/history.py:87-91`). Sort key `timestamp = 0` is reserved for the

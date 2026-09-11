@@ -9,7 +9,7 @@ Checklist rows `N2` / `P4`.
 ## What changed, and what caused the change
 
 **The cause was one API call.** `aws bedrock-agent get-knowledge-base
---knowledge-base-id [redacted:kb-id]`, run on 2026-08-31, returned
+--knowledge-base-id «redacted:kb-id»`, run on 2026-08-31, returned
 `storageConfiguration.type: S3_VECTORS`.
 
 | | ADR 0020 | this ADR |
@@ -37,14 +37,14 @@ reversal.
 
 ## Context — what AWS actually reports
 
-Read 2026-08-31 from KB `[redacted:kb-id]`, commands and full output in
+Read 2026-08-31 from KB `«redacted:kb-id»`, commands and full output in
 `docs/gali-ground-truth.md` §9.
 
 | fact | value |
 | ---- | ----- |
 | `storageConfiguration.type` | **`S3_VECTORS`** |
-| index | `arn:aws:s3vectors:eu-west-1:[redacted:account-id]:bucket/[redacted:vector-bucket]/index/[redacted:vector-index]` |
-| vector bucket | `[redacted:vector-bucket]`, created 2026-04-19, `AES256` |
+| index | `arn:aws:s3vectors:eu-west-1:«redacted:account-id»:bucket/«redacted:vector-bucket»/index/«redacted:vector-index»` |
+| vector bucket | `«redacted:vector-bucket»`, created 2026-04-19, `AES256` |
 | `dimension` | `1024` — confirms the spec |
 | `dataType` | `float32` — the `s3vectors` model's enum has exactly one member |
 | `distanceMetric` | **`euclidean`** — the spec never mentions a metric |

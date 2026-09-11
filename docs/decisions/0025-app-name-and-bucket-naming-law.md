@@ -59,7 +59,7 @@ Proposed: **`appfactory-<appName>-<accountId>`**.
 
 ### Against Gali's own pattern
 
-Gali uses `[redacted:documents-bucket-pattern]`
+Gali uses `«redacted:documents-bucket-pattern»`
 (`Gali-AWS-backend/template.yaml:112`). Read directly, not recalled.
 
 Three things follow from comparing them:

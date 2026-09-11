@@ -1,18 +1,16 @@
 /**
- * Golden test for `lib/gali/constants.ts`.
+ * Golden test for `lib/gali/constants.ts` — the STRUCTURE the factory copies from Gali.
  *
- * The constants in that module were copied out of the read-only Gali repos. This test
- * is what stops them drifting: `docs/gali-ground-truth.md` carries a digest table
- * that was computed from the Gali source, this test hashes what the module actually
- * exports, and the two must agree. Editing a constant without re-reading Gali — or
- * editing the document without re-reading Gali — fails here.
+ * Every value pinned here is a shape, an order, a limit or a schema. None of them is a
+ * production identifier and none of them is prompt text: those moved out of the
+ * repository under ADR 0039, and what verifies them is
+ * `tests/gali/productionSource.test.ts`.
  *
- * The scalars are pinned against literals written out below with their provenance, so
- * a changed scalar has to be changed in two places by someone who knows why.
+ * Each scalar is pinned against a literal written out below with its provenance, so a
+ * changed scalar has to be changed in two places by someone who knows why. That is the
+ * whole mechanism: `constants.ts` is generated, and a regeneration that changed one of
+ * these would mean Gali itself changed, which is a fact worth stopping for.
  */
-
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 
 import { describe, expect, test } from 'bun:test';
 
@@ -20,17 +18,14 @@ import {
   BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT,
   BEDROCK_SEARCH_RESULTS_PLACEHOLDER,
   GALI_CHAT_TABLE_KEY_SCHEMA,
-  GALI_CHAT_TABLE_NAME_DEFAULT,
-  GALI_CHAT_TABLE_NAME_PATTERN,
+  GALI_CHAT_TABLE_STAGES,
   GALI_CHAT_TABLE_TTL_ATTRIBUTE,
   GALI_CHAT_TABLE_TTL_TIMEZONE,
+  GALI_CLASSIFIER_API,
   GALI_CLASSIFIER_MAX_TOKENS,
   GALI_CLASSIFIER_PROMPT_LOCKED_AT,
-  GALI_CLASSIFIER_SYSTEM_PROMPT,
   GALI_CLASSIFIER_TEMPERATURE,
-  GALI_CUSTOM_DATA_SOURCE_ID,
   GALI_DATA_SOURCE_TYPE,
-  GALI_FALLBACK_MODEL_ID,
   GALI_GENERATION_MAX_TOKENS,
   GALI_GENERATION_TEMPERATURE,
   GALI_KB_METADATA_ATTRIBUTE_TYPES,
@@ -42,126 +37,65 @@ import {
   GALI_KB_METADATA_VERSION_PATTERN,
   GALI_KB_TOPIC_TAGS_MAX,
   GALI_KB_TOPIC_TAGS_MIN,
-  GALI_KNOWLEDGE_BASE_ID,
-  GALI_PRIMARY_MODEL_ID,
   GALI_QUERY_TRANSFORMATION_TYPE,
-  GALI_RAG_PROMPT_TEMPLATE,
   GALI_REGION,
   GALI_RETRIEVAL_TOP_K,
-  GALI_SYNC_DATA_SOURCE_ID,
-  GALI_SYSTEM_PROMPT,
   GALI_SYSTEM_PROMPT_PART_ORDER,
-  GALI_SYSTEM_PROMPT_PARTS,
   GALI_SYSTEM_PROMPT_SEPARATOR,
   GALI_TRIAGE_FAIL_SAFE_TIER,
   GALI_TRIAGE_TIERS,
 } from '@/lib/gali/constants';
 
-const GROUND_TRUTH_URL = new URL('../../docs/gali-ground-truth.md', import.meta.url);
-
-/** `| `NAME` | 1234 | `<64 hex>` |` */
-const DIGEST_ROW = /^\| `([A-Za-z0-9_.]+)` \| (\d+) \| `([0-9a-f]{64})` \|$/;
-
-interface GoldenEntry {
-  readonly length: number;
-  readonly sha256: string;
-}
-
-function readGoldenTable(): Map<string, GoldenEntry> {
-  const document = readFileSync(GROUND_TRUTH_URL, 'utf8');
-  const table = new Map<string, GoldenEntry>();
-
-  for (const line of document.split('\n')) {
-    const match = DIGEST_ROW.exec(line.trim());
-    if (match === null) {
-      continue;
+describe('gali constants — the module carries no production value (ADR 0039)', () => {
+  test('nothing exported here looks like a Bedrock resource id', () => {
+    // Ten uppercase alphanumerics is the shape of a knowledge base or data source id.
+    // The repository-wide guard in tests/repository/secretScan.test.ts is the real
+    // defence; this is the same check aimed at the one module most likely to regain
+    // one, because it is generated and a generator is easy to edit.
+    const exported = [
+      GALI_REGION,
+      GALI_DATA_SOURCE_TYPE,
+      GALI_QUERY_TRANSFORMATION_TYPE,
+      GALI_CLASSIFIER_API,
+      GALI_CLASSIFIER_PROMPT_LOCKED_AT,
+      GALI_CHAT_TABLE_TTL_ATTRIBUTE,
+      GALI_CHAT_TABLE_TTL_TIMEZONE,
+      GALI_KB_METADATA_LANGUAGE,
+      GALI_KB_METADATA_SOURCE,
+      GALI_KB_METADATA_VERSION_DEFAULT,
+      ...GALI_TRIAGE_TIERS,
+      ...GALI_CHAT_TABLE_STAGES,
+    ];
+    for (const value of exported) {
+      expect(/^[A-Z0-9]{10}$/.test(value)).toBe(false);
     }
-    const [, name, length, sha256] = match;
-    if (name === undefined || length === undefined || sha256 === undefined) {
-      continue;
-    }
-    table.set(name, { length: Number(length), sha256 });
-  }
-
-  return table;
-}
-
-function sha256(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
-}
-
-/** Every string constant the ground-truth document is expected to pin. */
-const PINNED_STRINGS: ReadonlyMap<string, string> = new Map([
-  ['GALI_RAG_PROMPT_TEMPLATE', GALI_RAG_PROMPT_TEMPLATE],
-  ['GALI_SYSTEM_PROMPT_PARTS.identity', GALI_SYSTEM_PROMPT_PARTS.identity],
-  ['GALI_SYSTEM_PROMPT_PARTS.language', GALI_SYSTEM_PROMPT_PARTS.language],
-  ['GALI_SYSTEM_PROMPT_PARTS.voice', GALI_SYSTEM_PROMPT_PARTS.voice],
-  ['GALI_SYSTEM_PROMPT_PARTS.rules', GALI_SYSTEM_PROMPT_PARTS.rules],
-  ['GALI_SYSTEM_PROMPT_PARTS.formatAndFlags', GALI_SYSTEM_PROMPT_PARTS.formatAndFlags],
-  ['GALI_SYSTEM_PROMPT', GALI_SYSTEM_PROMPT],
-  ['GALI_CLASSIFIER_SYSTEM_PROMPT', GALI_CLASSIFIER_SYSTEM_PROMPT],
-]);
-
-describe('gali constants — golden against docs/gali-ground-truth.md', () => {
-  const golden = readGoldenTable();
-
-  test('the document pins exactly the constants this test knows about', () => {
-    expect([...golden.keys()].sort()).toEqual([...PINNED_STRINGS.keys()].sort());
-  });
-
-  for (const [name, value] of PINNED_STRINGS) {
-    test(`${name} is byte-identical to the recorded digest`, () => {
-      const entry = golden.get(name);
-      expect(entry).not.toBe(undefined);
-      expect(value.length).toBe(entry?.length);
-      expect(sha256(value)).toBe(entry?.sha256);
-    });
-  }
-});
-
-describe('gali constants — the two assertions Gali makes about its own prompt', () => {
-  // shared/shared/prompt.py:410 and :413-416, asserted at import time there.
-  test('the live template contains the search-results placeholder', () => {
-    expect(GALI_RAG_PROMPT_TEMPLATE).toContain(BEDROCK_SEARCH_RESULTS_PLACEHOLDER);
-  });
-
-  test('the live template is within the Bedrock cap', () => {
-    expect(GALI_RAG_PROMPT_TEMPLATE.length).toBeLessThanOrEqual(
-      BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT,
-    );
-  });
-
-  test('the five-part composition is far over the cap, so it cannot be the live prompt', () => {
-    expect(GALI_SYSTEM_PROMPT.length).toBeGreaterThan(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT);
   });
 });
 
-describe('gali constants — scalars, each pinned to what the Gali repo states', () => {
-  test('region and Bedrock ids', () => {
-    // shared/shared/config.py:14, scripts/ingest_kb.py:32-34, samconfig.toml:10
+describe('gali constants — region, data source and inference settings', () => {
+  test('region and data source type', () => {
+    // shared/shared/config.py:14, scripts/ingest_kb.py:222
     expect(GALI_REGION).toBe('eu-west-1');
-    expect(GALI_KNOWLEDGE_BASE_ID).toBe('[redacted:kb-id]');
-    expect(GALI_CUSTOM_DATA_SOURCE_ID).toBe('[redacted:data-source-id-custom]');
-    expect(GALI_SYNC_DATA_SOURCE_ID).toBe('[redacted:data-source-id-sync]');
     expect(GALI_DATA_SOURCE_TYPE).toBe('CUSTOM');
   });
 
-  test('the two data source ids are not the same value', () => {
-    // Recorded as a discrepancy, not resolved. See QUESTIONS.md Q1.
-    expect(GALI_CUSTOM_DATA_SOURCE_ID).not.toBe(GALI_SYNC_DATA_SOURCE_ID);
+  test('the data source type is CUSTOM, which is not what the spec assumes', () => {
+    // The spec's R5 says the data source points at s3://<app>/kb/. App #1 does not.
+    // Recorded as a pin so the mismatch cannot quietly disappear. See ADR 0018, 0030.
+    expect(GALI_DATA_SOURCE_TYPE).not.toBe('S3');
   });
 
-  test('models and inference settings', () => {
-    // samconfig.toml:10, shared/shared/config.py:27,34,35, functions/chat/app.py:123
-    expect(GALI_PRIMARY_MODEL_ID).toBe('[redacted:model-id-primary]');
-    expect(GALI_FALLBACK_MODEL_ID).toBe('[redacted:model-id-fallback]');
+  test('retrieval and generation settings', () => {
+    // shared/shared/config.py:27,34,35, functions/chat/app.py:123
     expect(GALI_RETRIEVAL_TOP_K).toBe(5);
     expect(GALI_GENERATION_MAX_TOKENS).toBe(4096);
     expect(GALI_GENERATION_TEMPERATURE).toBe(0.3);
     expect(GALI_QUERY_TRANSFORMATION_TYPE).toBe('QUERY_DECOMPOSITION');
   });
+});
 
-  test('prompt composition', () => {
+describe('gali constants — prompt composition', () => {
+  test('the order is fixed and the separator is empty', () => {
     // shared/shared/prompt.py:293 — a bare concatenation, so the separator is empty.
     expect(GALI_SYSTEM_PROMPT_SEPARATOR).toBe('');
     expect([...GALI_SYSTEM_PROMPT_PART_ORDER]).toEqual([
@@ -171,46 +105,54 @@ describe('gali constants — scalars, each pinned to what the Gali repo states',
       'rules',
       'formatAndFlags',
     ]);
+  });
+
+  test('the cap and the required placeholder', () => {
+    // shared/shared/prompt.py:406-416. The 4096 is contested (Q43) and the factory's
+    // own authoring budget is lower again — this constant is the service limit as Gali
+    // asserts it, not the budget an author gets.
     expect(BEDROCK_RAG_PROMPT_TEMPLATE_LIMIT).toBe(4096);
     expect(BEDROCK_SEARCH_RESULTS_PLACEHOLDER).toBe('$search_results$');
   });
+});
 
-  test('four parts end in two newlines and the last in one', () => {
-    // Load-bearing for an empty separator: the spacing belongs to the authored text.
-    expect(GALI_SYSTEM_PROMPT_PARTS.identity.endsWith('\n\n')).toBe(true);
-    expect(GALI_SYSTEM_PROMPT_PARTS.language.endsWith('\n\n')).toBe(true);
-    expect(GALI_SYSTEM_PROMPT_PARTS.voice.endsWith('\n\n')).toBe(true);
-    expect(GALI_SYSTEM_PROMPT_PARTS.rules.endsWith('\n\n')).toBe(true);
-    expect(GALI_SYSTEM_PROMPT_PARTS.formatAndFlags.endsWith('\n\n')).toBe(false);
-    expect(GALI_SYSTEM_PROMPT_PARTS.formatAndFlags.endsWith('\n')).toBe(true);
-  });
-
-  test('the classifier', () => {
-    // shared/shared/redflag_classifier.py:58-71, locked at a635c2e (2026-07-05)
+describe('gali constants — the triage classifier', () => {
+  test('tiers, fail-safe and call settings', () => {
+    // shared/shared/redflag_classifier.py:58-71, :213-247, locked at a635c2e.
     expect([...GALI_TRIAGE_TIERS]).toEqual(['ER', 'CLARIFY_ER', 'SOFT', 'EXPLAIN']);
     expect(GALI_TRIAGE_FAIL_SAFE_TIER).toBe('ER');
     expect(GALI_CLASSIFIER_MAX_TOKENS).toBe(8);
     expect(GALI_CLASSIFIER_TEMPERATURE).toBe(0);
+    expect(GALI_CLASSIFIER_API).toBe('bedrock-runtime.Converse');
     expect(GALI_CLASSIFIER_PROMPT_LOCKED_AT).toBe('a635c2e');
   });
 
-  test('the chat-history table', () => {
-    // template.yaml:87-105, shared/shared/config.py:17, shared/shared/time_utils.py:10
-    expect(GALI_CHAT_TABLE_NAME_PATTERN).toBe('[redacted:chat-table-pattern]');
-    expect(GALI_CHAT_TABLE_NAME_DEFAULT).toBe('[redacted:chat-table]');
+  test('the fail-safe tier is the most severe one, not the cheapest', () => {
+    // Any API error, empty response or unparseable label resolves to ER, so a missed
+    // classification can never suppress an escalation. That is the property.
+    expect(GALI_TRIAGE_FAIL_SAFE_TIER).toBe(GALI_TRIAGE_TIERS[0]);
+  });
+});
+
+describe('gali constants — the chat-history table shape', () => {
+  test('composite key, TTL attribute and timezone', () => {
+    // template.yaml:87-105, shared/shared/time_utils.py:10
     expect(GALI_CHAT_TABLE_TTL_ATTRIBUTE).toBe('ttl');
     expect(GALI_CHAT_TABLE_TTL_TIMEZONE).toBe('Asia/Jerusalem');
     expect([...GALI_CHAT_TABLE_KEY_SCHEMA]).toEqual([
       { attributeName: 'session_id', keyType: 'HASH', attributeType: 'S' },
       { attributeName: 'timestamp', keyType: 'RANGE', attributeType: 'N' },
     ]);
+    expect([...GALI_CHAT_TABLE_STAGES]).toEqual(['dev', 'prod']);
   });
 
   test('the TTL attribute is ttl, not the spec R7 name', () => {
     expect(GALI_CHAT_TABLE_TTL_ATTRIBUTE).not.toBe('expires_at');
   });
+});
 
-  test('the 9-key KB metadata schema', () => {
+describe('gali constants — the 9-key KB metadata schema', () => {
+  test('keys, order and optionality', () => {
     // scripts/ingest_kb.py:37-44, :166-191, :201-214
     expect([...GALI_KB_METADATA_KEYS]).toEqual([
       'doc_type',
@@ -225,6 +167,9 @@ describe('gali constants — scalars, each pinned to what the Gali repo states',
     ]);
     expect(GALI_KB_METADATA_KEYS).toHaveLength(9);
     expect([...GALI_KB_METADATA_OPTIONAL_KEYS]).toEqual(['gestational_age_max_weeks']);
+  });
+
+  test('inline attribute types and the fixed values', () => {
     expect(GALI_KB_METADATA_ATTRIBUTE_TYPES).toEqual({
       doc_type: 'STRING',
       procedure_type: 'STRING',

@@ -10,7 +10,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { appConfigSchema, parseAppConfig } from '@/lib/appConfigSchema';
 import { CLINICAL_BLUE_SCHEME, GALI_SAGE_SCHEME } from '@/lib/colourSchemes';
-import { GALI_SYSTEM_PROMPT_PARTS } from '@/lib/gali/constants';
+import { FIXTURE_PROMPT_PART_TEXT } from '@/tests/fixtures/systemPromptParts';
 import type { AppConfig } from '@/types/appConfig';
 
 /**
@@ -25,11 +25,11 @@ const GALI_CONFIG: AppConfig = {
   renderPrecedenceText: false,
   digestRecipientEmail: 'gynecology-digest@wolfson.example.gov.il',
   systemPrompt: {
-    identity: GALI_SYSTEM_PROMPT_PARTS.identity,
-    language: GALI_SYSTEM_PROMPT_PARTS.language,
-    voice: GALI_SYSTEM_PROMPT_PARTS.voice,
-    rules: [GALI_SYSTEM_PROMPT_PARTS.rules],
-    formatAndFlags: GALI_SYSTEM_PROMPT_PARTS.formatAndFlags,
+    identity: FIXTURE_PROMPT_PART_TEXT.identity,
+    language: FIXTURE_PROMPT_PART_TEXT.language,
+    voice: FIXTURE_PROMPT_PART_TEXT.voice,
+    rules: [FIXTURE_PROMPT_PART_TEXT.rules],
+    formatAndFlags: FIXTURE_PROMPT_PART_TEXT.formatAndFlags,
   },
   dataFiles: [],
   disclaimers: [],
@@ -70,10 +70,10 @@ describe('appConfigSchema — accepts a valid Gali-shaped config', () => {
 
   test("Gali's real prompt text survives validation byte for byte", () => {
     const parsed = parseAppConfig(GALI_CONFIG);
-    expect(parsed.systemPrompt.identity).toBe(GALI_SYSTEM_PROMPT_PARTS.identity);
-    expect(parsed.systemPrompt.rules).toEqual([GALI_SYSTEM_PROMPT_PARTS.rules]);
+    expect(parsed.systemPrompt.identity).toBe(FIXTURE_PROMPT_PART_TEXT.identity);
+    expect(parsed.systemPrompt.rules).toEqual([FIXTURE_PROMPT_PART_TEXT.rules]);
     expect(parsed.systemPrompt.formatAndFlags).toBe(
-      GALI_SYSTEM_PROMPT_PARTS.formatAndFlags,
+      FIXTURE_PROMPT_PART_TEXT.formatAndFlags,
     );
   });
 

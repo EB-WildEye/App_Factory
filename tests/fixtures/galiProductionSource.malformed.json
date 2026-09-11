@@ -1,0 +1,30 @@
+{
+  "_why": "Deliberately invalid: manifest.digests is missing every key, resources.knowledgeBaseId is empty, and there is an unknown top-level field. Proves the loader rejects present-but-wrong instead of half-loading it.",
+  "manifest": {
+    "generatedAt": "2026-01-01T00:00:00+00:00",
+    "backendCommit": "fixture-backend (never read)",
+    "frontendCommit": "fixture-frontend (never read)",
+    "digests": {},
+    "lengths": {}
+  },
+  "resources": {
+    "knowledgeBaseId": "",
+    "customDataSourceId": "fixture-custom-data-source-id",
+    "syncDataSourceId": "fixture-sync-data-source-id",
+    "primaryModelId": "fixture-primary-model-id",
+    "fallbackModelId": "fixture-fallback-model-id",
+    "chatTableNamePattern": "fixture-chat-table-${Stage}",
+    "chatTableNameDefault": "fixture-chat-table-resolved"
+  },
+  "prompts": {
+    "ragPromptTemplate": "fixture-rag-template: not a real prompt. $search_results$\n",
+    "classifierSystemPrompt": "fixture-classifier: not a real prompt.\n",
+    "systemPromptParts": {
+      "identity": "fixture-identity: not a real prompt.\n\n",
+      "language": "fixture-language: not a real prompt.\n\n",
+      "voice": "fixture-voice: not a real prompt.\n\n",
+      "rules": "fixture-rules: not a real prompt.\n\n",
+      "formatAndFlags": "fixture-format-and-flags: not a real prompt.\n"
+    }
+  }
+}
