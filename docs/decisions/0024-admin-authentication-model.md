@@ -29,12 +29,11 @@ What the shape of the system already forces:
 - The Data Center **edits clinical content** for a live medical assistant. The
   blast radius of an unauthorised write is a wrong answer to a patient, not a
   defaced page.
-- Gali's own API has no authentication at all: `template.yaml` declares `/chat` and
-  `/history/{session_id}` with CORS and no authorizer, and the frontend sends no
-  credential. It is protected by obscurity and an allowlisted origin
-  (`AllowedOrigins`). That is a finding about app #1's security posture, not a
-  precedent to copy — a patient-facing chat endpoint and an admin provisioning
-  endpoint are not comparable.
+- App #1's own API authentication posture was read and is recorded in the local-only
+  production audit, not here (ADR 0039 — this repository is public). What matters for
+  *this* decision is only that it is **not a precedent to copy**: a patient-facing
+  chat endpoint and an admin endpoint holding a provisioning credential are not
+  comparable, and app #1 is frozen while the factory is not yet built.
 
 What is undecided: the identity provider, whether there are roles (can someone edit
 data without being able to delete an app?), and whether an audit trail is required.
@@ -93,6 +92,6 @@ route individually.
 - An audit trail needs a subject on every mutating call, which means the seam has
   to be able to produce one. A shared secret cannot, so choosing option 1 later
   would close the audit door.
-- Gali's own endpoints are unauthenticated. That is out of scope for this ADR and
-  belongs in whatever review covers the production system, but it should not be
-  read as a decision that admin endpoints may be the same.
+- App #1's own authentication posture is out of scope for this ADR and belongs in
+  whatever review covers the production system. It should not be read as a decision
+  that admin endpoints may be the same.

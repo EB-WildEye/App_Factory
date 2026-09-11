@@ -28,7 +28,7 @@ The architecture spec, step B6, shows the row as written:
   "ui_id":      "clinic-rtl",
   "app_name":   "gali-ivf",
   "dynamo_id":  "gali-ivf-chat",
-  "kb_id":      "[redacted:kb-id]",
+  "kb_id":      "«redacted:kb-id»",
   "created_at": "2026-08-06T09:14:02Z"
 }
 ```

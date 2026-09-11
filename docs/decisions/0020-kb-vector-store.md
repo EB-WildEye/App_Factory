@@ -25,7 +25,7 @@ parent 500 tokens, child 150 tokens, embeddings
 `cohere.embed-multilingual-v3`, dimensions 1024 — and is silent on the store those
 vectors go into.
 
-**Gali cannot answer it.** Its KB, `[redacted:kb-id]`, is a SAM *parameter*
+**Gali cannot answer it.** Its KB, `«redacted:kb-id»`, is a SAM *parameter*
 (`template.yaml:39-41`), created outside the stack, so nothing about its internals
 is in the repo. Reading both repos found **none of the five spec values either** —
 no chunking configuration, no embedding model id, no dimension count anywhere
@@ -67,7 +67,7 @@ Why this is expensive rather than merely missing:
 ## Recommendation
 
 **Option 1 — one shared OpenSearch Serverless collection, one index per app —
-and read the real values off `[redacted:kb-id]` before anything is provisioned.**
+and read the real values off `«redacted:kb-id»` before anything is provisioned.**
 
 The recommendation on the store is the easy half: shared is the only option whose
 cost does not scale linearly with an app count nobody has forecast, and per-app
@@ -85,7 +85,7 @@ retrieval layer, and it will show up as subtly worse answers rather than as an
 error.
 
 Concretely, before any provisioning code: run
-`aws bedrock-agent get-knowledge-base --knowledge-base-id [redacted:kb-id]` and
+`aws bedrock-agent get-knowledge-base --knowledge-base-id «redacted:kb-id»` and
 `get-data-source` for both data source ids in `QUESTIONS.md` Q1, and record the
 actual chunking strategy, embedding model, dimensions and vector store in
 `docs/gali-ground-truth.md`. That is a five-minute console read that either

@@ -17,11 +17,21 @@ the console, so its configuration is in no repo at all.
 
 Both are read-only. Nothing in this repo writes to either path.
 
-The machine-readable copy of everything below is `lib/gali/constants.ts`. The
-digest table at the end of this file is what `tests/gali/constants.golden.test.ts`
-reads: the test hashes each constant in that module and compares it against the
-digest recorded here, so a constant cannot drift without this document failing
-with it.
+**This repository is public, and this document is redacted accordingly (ADR 0039).**
+Gali's clinical prompt text, its Bedrock resource ids, its inference profile ids, its
+production table and bucket names, and the AWS account they live in are not written
+here. Where one of them used to appear, the text now carries a `«redacted:…»` token
+naming what was removed, and the value itself lives in
+`lib/gali/gali-production-source.local.json` — gitignored, regenerated from the
+read-only Gali checkout by `scripts/generate_gali_constants.py`, and never committed.
+Lengths, provenance and shapes stay, because none of them is a secret and all of them
+are what the factory actually has to reproduce.
+
+The machine-readable copy of the *structure* below is `lib/gali/constants.ts`, which
+is generated and carries no production value. `tests/gali/productionSource.test.ts` is
+what stops the local values drifting: it recomputes each digest from the local file and
+compares it against the manifest the generator wrote beside it, and — on a machine that
+has the Gali checkout — re-runs the generator to prove the file is what Gali produces.
 
 All line numbers are in the backend repo unless the path says otherwise.
 
@@ -60,17 +70,20 @@ precedence text is off for Gali.
 
 The literals in `prompt.py` carry readable phone numbers; at import those are
 replaced with the pre-built markdown links from `shared/shared/constants.py`
-(`shared/shared/prompt.py:386-404`). The verbatim text below and every string in
-`lib/gali/constants.ts` is the value **after** substitution — what production
-sends. For Gali's own numbers the substitution is a no-op on the visible text,
-which is why the block below still reads with literal numbers; the mechanism
-still matters, because it means `prompt.py` alone is not the final value.
+(`shared/shared/prompt.py:386-404`). Every string in the local source file is the
+value **after** substitution — what production sends. The mechanism matters even
+though the text is not reproduced here, because it means `prompt.py` alone is not the
+final value: a generator that read the literals rather than importing the module would
+record something production never sends.
 
-### 1.2 `RAG_PROMPT_TEMPLATE`, verbatim
+### 1.2 `RAG_PROMPT_TEMPLATE`
 
 <!-- BEGIN GENERATED: rag-prompt-template -->
-```text
-[redacted:rag-prompt-template]```
+> **Redacted (ADR 0039).** The text is a production clinical artefact and this
+> repository is public. It lives in `lib/gali/gali-production-source.local.json`,
+> which is gitignored and regenerated from the read-only Gali checkout by
+> `scripts/generate_gali_constants.py`. Length and provenance stay below; the
+> bytes do not.
 <!-- END GENERATED: rag-prompt-template -->
 
 ---
@@ -82,9 +95,9 @@ One `RetrieveAndGenerate` call per turn (`functions/chat/app.py:98-141`):
 | parameter | value | provenance |
 | --------- | ----- | ---------- |
 | `type` | `KNOWLEDGE_BASE` | `functions/chat/app.py:108` |
-| `knowledgeBaseId` | `[redacted:kb-id]` | `config.py:10` from `samconfig.toml:10` |
-| `modelArn` | `[redacted:model-id-primary]` | `samconfig.toml:10` |
-| fallback `modelArn` | `[redacted:model-id-fallback]` | `samconfig.toml:10`, tried in order at `functions/chat/app.py:144-164` |
+| `knowledgeBaseId` | `«redacted:kb-id»` | `config.py:10` from `samconfig.toml:10` |
+| `modelArn` | `«redacted:model-id-primary»` | `samconfig.toml:10` |
+| fallback `modelArn` | `«redacted:model-id-fallback»` | `samconfig.toml:10`, tried in order at `functions/chat/app.py:144-164` |
 | `numberOfResults` | `5` | `config.py:27` default, not overridden |
 | `queryTransformationConfiguration.type` | `QUERY_DECOMPOSITION` | `functions/chat/app.py:122-124` |
 | `maxTokens` | `4096` | `config.py:34` default |
@@ -182,12 +195,14 @@ The tier is not used directly: `derive_state` can de-escalate a raw `ER` to
 directive is chosen from the derived state, not the tier
 (`functions/chat/app.py:417-427`).
 
-### 4.1 The classifier prompt, verbatim
+### 4.1 The classifier prompt
 
 <!-- BEGIN GENERATED: classifier-system-prompt -->
-```text
-[redacted:classifier-system-prompt]
-```
+> **Redacted (ADR 0039).** The text is a production clinical artefact and this
+> repository is public. It lives in `lib/gali/gali-production-source.local.json`,
+> which is gitignored and regenerated from the read-only Gali checkout by
+> `scripts/generate_gali_constants.py`. Length and provenance stay below; the
+> bytes do not.
 <!-- END GENERATED: classifier-system-prompt -->
 
 ---
@@ -196,16 +211,16 @@ directive is chosen from the derived state, not the tier
 
 | fact | value | provenance |
 | ---- | ----- | ---------- |
-| KB id | `[redacted:kb-id]` | `scripts/ingest_kb.py:32`, `scripts/kb_verify_reconstruct.py:25`, `samconfig.toml:10` |
-| data source id (ingest) | `[redacted:data-source-id-custom]` | `scripts/ingest_kb.py:33`, `scripts/kb_verify_reconstruct.py:26` |
-| data source id (sync Lambda) | `[redacted:data-source-id-sync]` | `samconfig.toml:10` → `template.yaml:238` |
+| KB id | `«redacted:kb-id»` | `scripts/ingest_kb.py:32`, `scripts/kb_verify_reconstruct.py:25`, `samconfig.toml:10` |
+| data source id (ingest) | `«redacted:data-source-id-custom»` | `scripts/ingest_kb.py:33`, `scripts/kb_verify_reconstruct.py:26` |
+| data source id (sync Lambda) | `«redacted:data-source-id-sync»` | `samconfig.toml:10` → `template.yaml:238` |
 | data source type | `CUSTOM` | `scripts/ingest_kb.py:2,5,222` |
 | ingest API | `IngestKnowledgeBaseDocuments`, per-document upsert keyed on `customDocumentIdentifier.id` | `scripts/ingest_kb.py:217-252` |
 | region | `eu-west-1` | `shared/shared/config.py:14`, `scripts/ingest_kb.py:34`, `functions/backup/app.py:33`, and the frontend's fallback API URL, `Gali-frontend/src/services/apiService.ts:1` |
 
 **The two data source ids are a genuine discrepancy, not a typo I resolved.**
-`ingest_kb.py` and `kb_verify_reconstruct.py` both hard-code `[redacted:data-source-id-custom]` and
-call the CUSTOM document API. `samconfig.toml` passes `[redacted:data-source-id-sync]` as
+`ingest_kb.py` and `kb_verify_reconstruct.py` both hard-code `«redacted:data-source-id-custom»` and
+call the CUSTOM document API. `samconfig.toml` passes `«redacted:data-source-id-sync»` as
 `DataSourceId`, which reaches only the sync Lambda, which calls
 `StartIngestionJob` on S3 uploads under `documents/` (`template.yaml:228-270`).
 The repo nowhere states whether these are two data sources on one KB, or one
@@ -223,9 +238,9 @@ architecture spec describes.
 
 | fact | value | provenance |
 | ---- | ----- | ---------- |
-| name | `[redacted:chat-table-pattern]` | `template.yaml:87` |
+| name | `«redacted:chat-table-pattern»` | `template.yaml:87` |
 | `Stage` | `dev` \| `prod`, default `dev`; `samconfig.toml` overrides it nowhere | `template.yaml:34-37`, `samconfig.toml:10` |
-| code-side default | `[redacted:chat-table]` | `shared/shared/config.py:17` |
+| code-side default | `«redacted:chat-table»` | `shared/shared/config.py:17` |
 | partition key | `session_id`, type `S` | `template.yaml:90-96` |
 | **sort key** | `timestamp`, type `N` — epoch **milliseconds** | `template.yaml:92-98`, written at `shared/shared/history.py:117` |
 | TTL attribute | **`ttl`** | `template.yaml:103-105` |
@@ -282,24 +297,28 @@ script disagree on that one value, and the script is the stated intent.
 
 ---
 
-## 8. Digest table — the golden values
+## 8. Lengths — what this document is allowed to say about the prompts
 
-`tests/gali/constants.golden.test.ts` parses this table. Each row is
-`| constant | chars | sha256 of the UTF-8 bytes |`. A constant that changes in
-`lib/gali/constants.ts` without a matching change here fails the test, and vice
-versa.
+A length is a design fact: 4064 is why app #1 has 32 characters of headroom, and
+11,492 is why the five parts cannot be what production sends. Neither number reveals
+anything about the text.
+
+The digests moved out with the values (ADR 0039). They are in the local source file's
+`manifest.digests`, and `tests/gali/productionSource.test.ts` is what checks them.
 
 <!-- BEGIN GENERATED: digest-table -->
-| constant | chars | sha256 |
-| -------- | ----- | ------ |
-| `GALI_RAG_PROMPT_TEMPLATE` | 4064 | `000aabf0166d346e64a6e343bc976dcc7467df3b5600cdf36deff8cf2faaeacd` |
-| `GALI_SYSTEM_PROMPT_PARTS.identity` | 417 | `c6c0eeed335734e7e29daab27b09df85dfb7029c67012c9b918e597acf5a649e` |
-| `GALI_SYSTEM_PROMPT_PARTS.language` | 503 | `3cb07d380e424081cdfc5ce6da3804fe912722a82696f1f51a0fe91945e5d8b2` |
-| `GALI_SYSTEM_PROMPT_PARTS.voice` | 1777 | `cbd5c105f1310318aef38615fd90af9ae7135c910f8c0b29de43a3eb9d9867c9` |
-| `GALI_SYSTEM_PROMPT_PARTS.rules` | 5356 | `a02ad739713d519bd2a94fb66581f10217ba665c54f16bf9b9372ba1bc01cd61` |
-| `GALI_SYSTEM_PROMPT_PARTS.formatAndFlags` | 3439 | `ec1efc786bdc8f6469a68e975d3dc5b42624a514982e79e533c57185ae327101` |
-| `GALI_SYSTEM_PROMPT` | 11492 | `3dfa21944aeea8f5816d5737b0a5fc60bb9cfea75cdfbeb7d0b5b5c9aae60e1f` |
-| `GALI_CLASSIFIER_SYSTEM_PROMPT` | 5242 | `ac7362bc02a4d7a2eff10f610ba28827925dc7f6a1e3b1f0c42fbfee2894a095` |
+| value | characters |
+| ----- | ---------- |
+| `ragPromptTemplate` | 4064 |
+| `classifierSystemPrompt` | 5242 |
+| `systemPrompt` | 11492 |
+| `systemPromptParts.identity` | 417 |
+| `systemPromptParts.language` | 503 |
+| `systemPromptParts.voice` | 1777 |
+| `systemPromptParts.rules` | 5356 |
+| `systemPromptParts.formatAndFlags` | 3439 |
+
+Digests are in the local source file's `manifest.digests`, not here. A digest committed next to a redacted value is still a pin against a production string, and the integrity check it enabled is now done inside the local file - see `findManifestMismatches` in `lib/gali/productionSource.ts`.
 <!-- END GENERATED: digest-table -->
 
 ---
@@ -308,17 +327,17 @@ versa.
 
 Gali's Knowledge Base was created by hand in the console, so none of its
 configuration is in either repo. It is all readable from the API. Read
-**2026-08-31**, account `[redacted:account-id]`, region `eu-west-1`, identity
-`arn:aws:iam::[redacted:account-id]:user/[redacted:iam-user]`.
+**2026-08-31**, account `«redacted:account-id»`, region `eu-west-1`, identity
+`arn:aws:iam::«redacted:account-id»:user/«redacted:iam-user»`.
 
 Commands, so any of this can be re-checked:
 
 ```bash
-aws bedrock-agent get-knowledge-base  --knowledge-base-id [redacted:kb-id] --region eu-west-1
-aws bedrock-agent list-data-sources   --knowledge-base-id [redacted:kb-id] --region eu-west-1
-aws bedrock-agent get-data-source     --knowledge-base-id [redacted:kb-id] --data-source-id [redacted:data-source-id-custom] --region eu-west-1
-aws s3vectors get-index --vector-bucket-name [redacted:vector-bucket] \
-                        --index-name [redacted:vector-index] --region eu-west-1
+aws bedrock-agent get-knowledge-base  --knowledge-base-id «redacted:kb-id» --region eu-west-1
+aws bedrock-agent list-data-sources   --knowledge-base-id «redacted:kb-id» --region eu-west-1
+aws bedrock-agent get-data-source     --knowledge-base-id «redacted:kb-id» --data-source-id «redacted:data-source-id-custom» --region eu-west-1
+aws s3vectors get-index --vector-bucket-name «redacted:vector-bucket» \
+                        --index-name «redacted:vector-index» --region eu-west-1
 aws iam get-role --role-name AmazonBedrockExecutionRoleForKnowledgeBase_dvica
 ```
 
@@ -358,8 +377,8 @@ inherits it. A factory that tries to pass `dimensions: 1024` to
 Rows 7 and 9 are the two that matter.
 
 **S3 Vectors.** The vector store is `S3_VECTORS` — index
-`arn:aws:s3vectors:eu-west-1:[redacted:account-id]:bucket/[redacted:vector-bucket]/index/[redacted:vector-index]`,
-in vector bucket `[redacted:vector-bucket]`, both created 2026-04-19,
+`arn:aws:s3vectors:eu-west-1:«redacted:account-id»:bucket/«redacted:vector-bucket»/index/«redacted:vector-index»`,
+in vector bucket `«redacted:vector-bucket»`, both created 2026-04-19,
 `AES256`. ADR 0020 offered four options — shared OpenSearch Serverless,
 per-app OpenSearch Serverless, Aurora pgvector, a managed third party — and the
 real answer is none of them. That matters beyond being wrong: 0020's whole cost
@@ -383,8 +402,8 @@ present:
 
 ```json
 { "Condition": {
-    "StringEquals": { "aws:SourceAccount": "[redacted:account-id]" },
-    "ArnLike": { "aws:SourceArn": "arn:aws:bedrock:eu-west-1:[redacted:account-id]:knowledge-base/*" } } }
+    "StringEquals": { "aws:SourceAccount": "«redacted:account-id»" },
+    "ArnLike": { "aws:SourceArn": "arn:aws:bedrock:eu-west-1:«redacted:account-id»:knowledge-base/*" } } }
 ```
 
 `AmazonBedrockS3VectorStorePolicyForKnowledgeBase_dvica` — five actions, scoped to
@@ -410,14 +429,14 @@ does not arise for app #1.
 Recorded as a read, not acted on — which door Gali production uses is being
 investigated elsewhere.
 
-- `list-data-sources` on `[redacted:kb-id]` returns **exactly one**: `[redacted:data-source-id-custom]`, name
+- `list-data-sources` on `«redacted:kb-id»` returns **exactly one**: `«redacted:data-source-id-custom»`, name
   `md-files-22-06-26`, `AVAILABLE`, created 2026-06-22, updated 2026-06-28.
-- `get-data-source` for `[redacted:data-source-id-sync]` returns
-  `ResourceNotFoundException: DataSource with id [redacted:data-source-id-sync] is not found`.
+- `get-data-source` for `«redacted:data-source-id-sync»` returns
+  `ResourceNotFoundException: DataSource with id «redacted:data-source-id-sync» is not found`.
 - `list-knowledge-bases` in `eu-west-1` returns **exactly one** KB, so
-  `[redacted:data-source-id-sync]` is not a data source on some other knowledge base either.
+  `«redacted:data-source-id-sync»` is not a data source on some other knowledge base either.
 
-`[redacted:data-source-id-sync]` is the value `samconfig.toml:10` passes as `DataSourceId` to the sync
+`«redacted:data-source-id-sync»` is the value `samconfig.toml:10` passes as `DataSourceId` to the sync
 Lambda. See `QUESTIONS.md` Q1; no change has been made anywhere on the strength of
 this read.
 
@@ -444,66 +463,40 @@ Because the client keeps it in memory only, a page reload loses the session and
 the next message starts a new one. That is a privacy property, not a bug: nothing
 about a conversation survives in the browser.
 
-### 10.2 Caller-supplied or unforgeable — the answer is caller-supplied
+### 10.2 App #1's authorization behaviour — deliberately not recorded here
 
-**The id is caller-supplied.** It is not derived from anything the caller cannot
-forge, and there is nothing to forge *against*:
+> **Redacted (ADR 0039).** How app #1's endpoints validate a session id, what a
+> caller can do with an id that is not theirs, and the paths by which an id becomes
+> known are security findings about a live, patient-facing clinical system. They are
+> recorded in the production audit, which now lives outside this repository. This
+> repository is public, and a published finding is published whether or not anyone
+> has acted on it yet. Reporting it to whoever owns app #1's security posture is a
+> decision for EB — see `QUESTIONS.md`.
 
-- `/chat` takes `session_id` straight from the request body and uses it verbatim,
-  with only `.strip()` applied. **No format check, no signature, no HMAC, no
-  binding to an IP, a cookie, a header or an account** — there are no accounts
-  (`H1`), and the API has no authorizer at all (`template.yaml`, no
-  `Auth` block on either route).
-- The server mints a uuid4 **only** when the field is absent. Send `"x"` and the
-  session id is `"x"`.
-- So the id is a **bearer token with no issuer check**: whoever presents it is
-  treated as the owner of that conversation.
+What the factory needs out of that read is a requirement, not a reproduction:
 
-### 10.3 Validation, and the asymmetry between the two endpoints
+1. **The session id is a capability, not an identity.** The factory's history
+   endpoint authorizes the reader; it does not treat knowledge of an id as proof of
+   ownership of the conversation. This is why Q28's recommendation is option (b) and
+   not "copy app #1".
+2. **The write path and the read path must agree on the id format.** Two endpoints
+   with different opinions about what a valid id is can produce a conversation that
+   is written successfully and can never be read back.
+3. **Neither requirement is met by copying app #1.** Whether app #1 itself changes is
+   not this repository's decision: it is under an ethics-committee freeze, and ADR
+   0018 is where that question lives.
 
-| endpoint | validation | provenance |
-| -------- | ---------- | ---------- |
-| `POST /chat` | **none whatsoever** | `functions/chat/app.py:201` — no check between `.strip()` and use |
-| `GET /history/{session_id}` | `uuid.UUID(session_id)`, `ValueError` → `400 invalid session_id format` | `functions/history/app.py:48-55` |
+### 10.3 Is a session id guessable
 
-Three things follow, and all three are properties of Gali as it stands rather
-than criticisms of it:
+**No, and guessing is not the interesting question.** A uuid4 is 122 random bits, the
+table has no index that lists session ids — `get_messages` is a `Query` on an exact
+partition key (`shared/shared/history.py:177-181`) — and every item expires at the
+next midnight Israel time (§6), so the useful window is under a day.
 
-1. **The two endpoints disagree.** `/chat` accepts any string; `/history` accepts
-   only a well-formed UUID. A session created with a non-UUID id — which `/chat`
-   permits — can therefore **never be read back** through `/history`. The data is
-   in the table and the read path rejects the key.
-2. **`/history` checks format, not ownership.** There is no authorization step of
-   any kind. Knowing a session id is sufficient to read the entire conversation,
-   including everything the PII scrubber left in place.
-3. **Writes are equally open.** Because `/chat` accepts a supplied id, a caller who
-   learns another session's id can also **append turns to it** — `save_turn` writes
-   under that partition key unconditionally (`functions/chat/app.py:229-236`).
-   Exposure is not read-only.
-
-### 10.4 Is it enumerable
-
-**Not by brute force, and that is not the exposure.**
-
-- A uuid4 is 122 random bits. Guessing a live one is not feasible, and the table
-  has no index that lists session ids — `get_messages` is a `Query` on an exact
-  partition key (`shared/shared/history.py:177-181`), so there is no cheap way to
-  ask "what sessions exist".
-- The TTL shortens the window further: every item expires at the next midnight
-  Israel time, so a session id is only useful until then (§6).
-
-The realistic paths to a session id are all disclosure, not enumeration:
-
-- **It is logged.** `logger.append_keys(session_id=session_id)`
-  (`functions/chat/app.py:208`) puts it on every structured log line for the turn,
-  so it is in CloudWatch for the log group's retention, and `/history` needs
-  nothing else.
-- **It is in a response header** (`X-Session-ID`), which CORS explicitly exposes
-  (`template.yaml:30`), so anything sitting in the response path can read it.
-- **`/history` is unauthenticated and, as far as this repo shows, unused.** The
-  production frontend never calls it — `apiService` has exactly two methods,
-  `sendMessage` and `resetSession`, and neither touches `/history`. So the endpoint
-  that turns a leaked id into a full transcript has no known consumer.
+That matters to the factory in one direction only: **entropy is not the control.**
+A design that relies on an id being unguessable has no defence left once the id is
+known through any ordinary channel, and ids travel — they are returned to clients,
+and systems log what they are given. The control has to be authorization.
 
 ### 10.5 What generic Gali has to copy, and what it must decide
 
@@ -517,8 +510,8 @@ Copy, because app #1 depends on it:
 
 Not settled by copying, and each is a decision rather than a value:
 
-- Whether the factory's `/history` equivalent authorizes, or keeps
-  format-only validation.
+- Whether the factory's history endpoint authorizes the reader, or validates only
+  that the id is well formed.
 - Whether a supplied `session_id` is accepted at all, or whether the server always
   mints one.
 - Whether the two endpoints are made consistent about the UUID format.
@@ -628,7 +621,7 @@ unknown.
 | 7 | the KB's own data-access IAM role | **closed — §9.3** | the template grants the *sync Lambda* `StartIngestionJob` + bucket read (`template.yaml:243-259`). The role the KB itself assumes is outside the stack. |
 | 8 | which of the two data source ids is current | **closed — §9.4** | both are used, by different code paths; see §5. |
 | 9 | prompt version increment policy | **not found** | there is no versioned prompt artefact at all. The prompt is a Python literal in the shared Lambda layer, versioned by git. |
-| 10 | the S3 `kb/` and `prompt/v1.txt` layout the spec describes | **not found** | the bucket is `[redacted:documents-bucket-pattern]` (`template.yaml:112`) and the watched prefix is `documents/`, not `kb/` (`template.yaml:270`). No `prompt/` prefix exists. |
+| 10 | the S3 `kb/` and `prompt/v1.txt` layout the spec describes | **not found** | the bucket is `«redacted:documents-bucket-pattern»` (`template.yaml:112`) and the watched prefix is `documents/`, not `kb/` (`template.yaml:270`). No `prompt/` prefix exists. |
 
 Items 1-5 were the sharpest finding here while they were open: the spec stated
 five values as fixed for every app and not one could be confirmed against app #1.

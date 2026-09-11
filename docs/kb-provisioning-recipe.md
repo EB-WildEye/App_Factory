@@ -25,7 +25,7 @@ they exist and never says who makes them.
 
 | # | thing | why it cannot wait |
 | - | ----- | ------------------ |
-| P-1 | A vector bucket (`s3vectors:CreateVectorBucket`) | An index lives in a bucket. App #1's is `[redacted:vector-bucket]`, a console-generated name. |
+| P-1 | A vector bucket (`s3vectors:CreateVectorBucket`) | An index lives in a bucket. App #1's is `«redacted:vector-bucket»`, a console-generated name. |
 | P-2 | The KB service role, with its trust policy | `CreateKnowledgeBase` takes `roleArn` as a **required** parameter, so the role must exist and be assumable *before* the first KB call. |
 
 The role's trust policy, copied from app #1's — both confused-deputy conditions
@@ -140,8 +140,8 @@ Two model details that matter and are easy to get wrong:
   all. The 1024 lives on the **index** (K-2). Setting it in both places is at best
   redundant and at worst a mismatch nobody checks.
 - `storageConfiguration` is **optional** in the model. Omitting it appears to be
-  what the console did for app #1: the bucket `[redacted:vector-bucket]` and
-  index `[redacted:vector-index]` both carry generated names. The
+  what the console did for app #1: the bucket `«redacted:vector-bucket»` and
+  index `«redacted:vector-index»` both carry generated names. The
   factory should pass it explicitly rather than accept a generated store it cannot
   then find by name.
 
